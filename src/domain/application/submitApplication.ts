@@ -1,8 +1,6 @@
 import { CommandHandler } from "@event-driven-io/emmett";
-import type {
-	SQLiteConnection,
-	SQLiteEventStore,
-} from "@event-driven-io/emmett-sqlite";
+import type { SQLiteEventStore } from "@event-driven-io/emmett-sqlite";
+import type { RecipientRepository } from "../recipient/repository.ts";
 import { decide, evolve, initialState } from "./decider.ts";
 import { resolveIdentity } from "./resolveIdentity.ts";
 import type {
@@ -31,14 +29,12 @@ const handle = CommandHandler<
 export async function submitApplication(
 	form: ApplicationFormData,
 	eventStore: SQLiteEventStore,
-	pool: {
-		withConnection: <T>(
-			fn: (conn: SQLiteConnection) => Promise<T>,
-		) => Promise<T>;
-	},
+	recipientRepo: RecipientRepository,
 ): Promise<{ streamId: string; events: ApplicationEvent[] }> {
-	const identityResolution = await pool.withConnection((conn) =>
-		resolveIdentity(form.phone, form.name, conn),
+	const identityResolution = await resolveIdentity(
+		form.phone,
+		form.name,
+		recipientRepo,
 	);
 
 	const command: SubmitApplication = {
@@ -64,5 +60,19 @@ export async function submitApplication(
 		decide(command, state),
 	);
 
-	return { streamId, events: newEvents as ApplicationEvent[] };
+	if (identityResolution.type === "new") {
+		try {
+			await recipientRepo.create({
+				phone: form.phone,
+				name: form.name,
+				email: form.email,
+				paymentPreference: form.paymentPreference,
+				meetingPlace: form.meetingPlace,
+			});
+		} catch {
+			// Recipient already exists (race condition) — safe to ignore
+		}
+	}
+
+	return { streamId, events: newEvents };
 }

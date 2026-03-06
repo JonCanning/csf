@@ -1,40 +1,28 @@
-import type { SQLiteConnection } from "@event-driven-io/emmett-sqlite";
+import type { RecipientRepository } from "../recipient/repository.ts";
+import { toApplicantId } from "./applicantId.ts";
 import { normalizeName } from "./normalizeName.ts";
 import type { IdentityResolution } from "./types.ts";
 
 export async function resolveIdentity(
 	phone: string,
 	name: string,
-	connection: SQLiteConnection,
+	recipientRepo: RecipientRepository,
 ): Promise<IdentityResolution> {
-	let rows: { applicant_id: string; name: string }[];
-	try {
-		rows = await connection.query<{
-			applicant_id: string;
-			name: string;
-		}>("SELECT applicant_id, name FROM known_applicants WHERE phone = ?", [
-			phone,
-		]);
-	} catch {
-		return { type: "new" };
-	}
+	const existing = await recipientRepo.getByPhone(phone);
 
-	if (rows.length === 0) {
-		return { type: "new" };
-	}
-
-	const existing = rows[0];
 	if (!existing) {
 		return { type: "new" };
 	}
 
+	const applicantId = toApplicantId(phone);
+
 	if (normalizeName(name) === normalizeName(existing.name)) {
-		return { type: "matched", applicantId: existing.applicant_id };
+		return { type: "matched", applicantId };
 	}
 
 	return {
 		type: "flagged",
-		applicantId: existing.applicant_id,
+		applicantId,
 		reason: "Phone matches but name differs",
 	};
 }

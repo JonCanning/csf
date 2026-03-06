@@ -1,4 +1,5 @@
 import { IllegalStateError } from "@event-driven-io/emmett";
+import { toApplicantId } from "./applicantId.ts";
 import type {
 	ApplicationEvent,
 	ApplicationState,
@@ -14,7 +15,7 @@ function resolveApplicantId(
 ): string {
 	switch (resolution.type) {
 		case "new":
-			return `applicant-${phone}`;
+			return toApplicantId(phone);
 		case "matched":
 		case "flagged":
 			return resolution.applicantId;

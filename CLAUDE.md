@@ -111,6 +111,10 @@ bun --hot ./index.ts
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
 
+## Pre-push
+
+Before pushing, always run `bunx biome check --write` to format and lint, then `bun test` to verify nothing is broken.
+
 ## Code Review
 
 After completing implementation work, dispatch a `typescript-pro` agent to review all changed files for type safety, unsound casts, and idiomatic TypeScript patterns before considering the work done.
