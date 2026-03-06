@@ -4,7 +4,7 @@
 
 ## Summary
 
-We're moving from manually awarding £40 grants to a **lottery-based system**: anyone applies during the month, winners are randomly drawn at month end, limited by available Open Collective funds.
+We're moving from manually awarding £40 grants to a **lottery-based system**: anyone applies during a limited window, winners are randomly drawn at month end, limited by available Open Collective funds.
 
 ---
 
@@ -12,10 +12,10 @@ We're moving from manually awarding £40 grants to a **lottery-based system**: a
 
 ```mermaid
 flowchart TD
-    subgraph "📥 APPLICATION PHASE · 1st—28th of month"
+    subgraph "📥 APPLICATION PHASE · open for a limited window (dates TBD)"
         SMS([📱 Person texts or<br/>emails to apply]) --> LINK[Auto-reply with<br/>unique form link]
         WEB([🌐 Person visits<br/>website form]) --> FORM
-        LINK --> FORM["Complete Online Form<br/>(name, phone OR email,<br/>meeting place or address,<br/>payment preference: bank or cash)"]
+        LINK --> FORM["Complete Online Form<br/>(name, phone number (required),<br/>email (optional),<br/>meeting place or address,<br/>payment preference: bank or cash)"]
 
         FORM --> ID{Identity<br/>Resolution}
         ID -->|Email + name or<br/>phone + name match| EXISTING[Link to existing<br/>applicant profile]
@@ -54,7 +54,9 @@ flowchart TD
         VERIFY -->|✅ Approved| CLEARED[Due diligence<br/>passed]
         VERIFY -->|❌ Rejected| RETRY{Attempts<br/>< 3?}
         RETRY -->|Yes| BANK_FORM
-        RETRY -->|No| RELEASE[Slot released<br/>to waitlist]
+        RETRY -->|No| OFFER_CASH{"Offer cash<br/>instead?"}
+        OFFER_CASH -->|Accepts| CASH_MEET
+        OFFER_CASH -->|Declines| RELEASE[Slot released<br/>to waitlist]
 
         CASH_MEET --> CASH_DONE([Cash handed<br/>over in person])
         CASH_DONE --> RECORD
@@ -67,8 +69,9 @@ flowchart TD
     end
 
     subgraph "⏳ NO-RESPONSE HANDLING"
-        WIN_NOTIFY -->|No response<br/>7 days| REMIND[Send reminder]
-        REMIND -->|No response<br/>14 days| RELEASE
+        WIN_NOTIFY -->|No response<br/>7 days| REMIND["Send reminder<br/>+ try calling if<br/>phone number on file"]
+        REMIND -->|No response<br/>14 days| HOLD[Slot held until<br/>month end]
+        HOLD -->|Month end| RELEASE
     end
 
     subgraph "📋 WAITLIST"
@@ -116,6 +119,9 @@ stateDiagram-v2
         Selected --> AwaitingBankDetails: Notified (chose bank)
         Selected --> CashHandover: Notified (chose cash)
         AwaitingBankDetails --> AwaitingBankDetails: Attempt failed\n(retries remain)
+        AwaitingBankDetails --> OfferedCash: Max attempts,\noffered cash
+        OfferedCash --> CashHandover: Accepts cash
+        OfferedCash --> Released: Declines
         AwaitingBankDetails --> DueDiligencePassed: POA verified
         DueDiligencePassed --> Paid: Transfer sent
         CashHandover --> Paid: Volunteer hands over cash
@@ -123,7 +129,7 @@ stateDiagram-v2
 
     state "📋 Release & Waitlist" as release {
         Selected --> Released: No response (14 days)
-        AwaitingBankDetails --> Released: Max attempts exceeded
+        AwaitingBankDetails --> Released: Declines cash alternative
         CashHandover --> Released: No-show / timeout
         Released --> Selected: Waitlist next-up
     }
@@ -132,7 +138,7 @@ stateDiagram-v2
     Rejected --> [*]
     NotSelected --> [*]
 
-    note right of Selected: Reminder sent at 7 days
+    note right of Selected: Reminder + phone call at 7 days\nSlot held until month end
 ```
 
 ---
@@ -143,11 +149,13 @@ stateDiagram-v2
 |------|--------|
 | **Grant amount** | £40 fixed |
 | **Cooldown** | 3 months from selection month (selected Jan → reapply Apr) |
-| **Application window** | 1st–28th of each month |
+| **Application window** | Limited window each month (dates TBD — not open all month) |
+| **Phone number** | Mandatory — helps with eligibility checking and contacting winners |
 | **Slots available** | `floor((balance − reserve) ÷ £40)`, reserve set by admin |
-| **Unresponsive winners** | Reminder at 7 days, released to waitlist at 14 days |
-| **POA verification** | Max 3 attempts, then slot released to waitlist |
+| **Unresponsive winners** | Reminder + phone call attempt at 7 days, slot held until month end then released to waitlist |
+| **POA verification** | Max 3 attempts, then offered cash as alternative before releasing slot |
 | **Payment options** | Bank transfer or cash (in-person meeting) |
+| **Data retention** | Applicant info auto-deleted after 6 months (matching existing volunteer data policy) |
 
 ---
 
@@ -185,8 +193,11 @@ stateDiagram-v2
 | `BankDetailsSubmitted` | Recipient submits POA + bank details | Add to volunteer verification queue |
 | `ProofOfAddressVerified` | Volunteer approves | Initiate payment |
 | `ProofOfAddressRejected` | Volunteer rejects | Notify recipient, allow retry (max 3) |
-| `WinnerUnresponsive` | 14 days no response | Release slot to waitlist |
-| `SlotReleased` | Max POA attempts or cash no-show | Release slot to waitlist |
+| `CashAlternativeOffered` | Max POA attempts reached | Offer recipient cash instead of bank transfer |
+| `CashAlternativeAccepted` | Recipient accepts cash | Route to cash handover flow |
+| `WinnerUnresponsive` | 14 days no response | Slot held until month end, then released to waitlist |
+| `SlotReleased` | Month end (unresponsive) or cash declined | Release slot to waitlist |
+| `ApplicantDataExpired` | 6 months since last activity | Auto-delete applicant info (retain inbox records) |
 | `CashHandoverCompleted` | Volunteer hands over cash in person | Record grant, start 3-month cooldown |
 | `BankTransferCompleted` | Funds transferred | Record grant, start 3-month cooldown |
 

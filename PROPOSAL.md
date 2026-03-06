@@ -4,7 +4,7 @@
 
 ## Summary
 
-We're moving from manually awarding £40 grants to a **lottery-based system**: anyone applies during the month, winners are randomly drawn at month end, limited by available Open Collective funds.
+We're moving from manually awarding £40 grants to a **lottery-based system**: anyone applies during a limited window, winners are randomly drawn at month end, limited by available Open Collective funds.
 
 ---
 
@@ -12,10 +12,10 @@ We're moving from manually awarding £40 grants to a **lottery-based system**: a
 
 ```mermaid
 flowchart TD
-    subgraph "📥 APPLICATION PHASE · 1st—28th of month"
+    subgraph "📥 APPLICATION PHASE · open for a limited window (dates TBD)"
         SMS([📱 Person texts or<br/>emails to apply]) --> LINK[Auto-reply with<br/>unique form link]
         WEB([🌐 Person visits<br/>website form]) --> FORM
-        LINK --> FORM["Complete Online Form<br/>(name, phone OR email,<br/>meeting place or address,<br/>payment preference: bank or cash)"]
+        LINK --> FORM["Complete Online Form<br/>(name, phone number (required),<br/>email (optional),<br/>meeting place or address,<br/>payment preference: bank or cash)"]
 
         FORM --> ID{Identity<br/>Resolution}
         ID -->|Email + name or<br/>phone + name match| EXISTING[Link to existing<br/>applicant profile]
@@ -54,7 +54,9 @@ flowchart TD
         VERIFY -->|✅ Approved| CLEARED[Due diligence<br/>passed]
         VERIFY -->|❌ Rejected| RETRY{Attempts<br/>< 3?}
         RETRY -->|Yes| BANK_FORM
-        RETRY -->|No| RELEASE[Slot released<br/>to waitlist]
+        RETRY -->|No| OFFER_CASH{"Offer cash<br/>instead?"}
+        OFFER_CASH -->|Accepts| CASH_MEET
+        OFFER_CASH -->|Declines| RELEASE[Slot released<br/>to waitlist]
 
         CASH_MEET --> CASH_DONE([Cash handed<br/>over in person])
         CASH_DONE --> RECORD
@@ -67,8 +69,9 @@ flowchart TD
     end
 
     subgraph "⏳ NO-RESPONSE HANDLING"
-        WIN_NOTIFY -->|No response<br/>7 days| REMIND[Send reminder]
-        REMIND -->|No response<br/>14 days| RELEASE
+        WIN_NOTIFY -->|No response<br/>7 days| REMIND["Send reminder<br/>+ try calling if<br/>phone number on file"]
+        REMIND -->|No response<br/>14 days| HOLD[Slot held until<br/>month end]
+        HOLD -->|Month end| RELEASE
     end
 
     subgraph "📋 WAITLIST"
@@ -98,11 +101,13 @@ flowchart TD
 |------|--------|
 | **Grant amount** | £40 fixed |
 | **Cooldown** | 3 months from selection month (selected Jan → reapply Apr) |
-| **Application window** | 1st–28th of each month |
+| **Application window** | Limited window each month (dates TBD — not open all month) |
+| **Phone number** | Mandatory — helps with eligibility checking and contacting winners |
 | **How many winners?** | Based on available funds: (balance − reserve) ÷ £40, reserve set by admin |
-| **Unresponsive winners** | Reminder at 7 days, released to waitlist at 14 days |
-| **Proof of address** | Required for bank transfer, max 3 attempts |
+| **Unresponsive winners** | Reminder + phone call attempt at 7 days, slot held until month end then released to waitlist |
+| **Proof of address** | Required for bank transfer, max 3 attempts — then offered cash as alternative |
 | **Payment options** | Bank transfer or cash (in-person handover) |
+| **Data retention** | Applicant info auto-deleted after 6 months (matching existing volunteer data policy) |
 
 ---
 
@@ -129,7 +134,7 @@ flowchart TD
 
 1. Text/email us, or visit the website
 2. Get a link to the online form
-3. Fill in: name, phone or email, where they'd like to meet (or address), and whether they want bank transfer or cash
+3. Fill in: name, phone number (required), email (optional), where they'd like to meet (or address), and whether they want bank transfer or cash
 4. If eligible, they're added to that month's lottery pool
 5. At month end, winners are drawn and notified
 
@@ -137,8 +142,9 @@ flowchart TD
 
 **Bank transfer:**
 1. You receive a secure form to upload proof of address and enter bank details
-2. A volunteer checks the proof of address
-3. £40 is transferred to your account
+2. A volunteer checks the proof of address (up to 3 attempts)
+3. If proof of address can't be verified, you'll be offered cash instead
+4. £40 is transferred to your account (or handed over as cash)
 
 **Cash:**
 1. A volunteer contacts you to arrange a meeting
@@ -148,7 +154,7 @@ flowchart TD
 
 - You're notified that you weren't selected this month
 - You can apply again next month
-- If a winner doesn't respond within 14 days, the next person on the waitlist gets their slot
+- If a winner doesn't respond within 14 days (we'll try calling too), their slot is released to the waitlist at month end
 
 ---
 
