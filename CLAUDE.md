@@ -1,4 +1,10 @@
 
+## Commits
+
+No Co-Authored-By trailers. No DCO sign-off. No trailers of any kind.
+
+## Tooling
+
 Default to using Bun instead of Node.js.
 
 - Use `bun <file>` instead of `node <file>` or `ts-node <file>`
@@ -104,3 +110,7 @@ bun --hot ./index.ts
 ```
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+
+## Code Review
+
+After completing implementation work, dispatch a `typescript-pro` agent to review all changed files for type safety, unsound casts, and idiomatic TypeScript patterns before considering the work done.
