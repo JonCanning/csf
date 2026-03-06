@@ -225,7 +225,9 @@ describe("grantProjection", () => {
 
 		rows = await queryGrant(id);
 		expect(rows[0]!.status).toBe("reimbursed");
-		expect(rows[0]!.expense_reference).toBe("https://opencollective.com/csf/expenses/123");
+		expect(rows[0]!.expense_reference).toBe(
+			"https://opencollective.com/csf/expenses/123",
+		);
 		expect(rows[0]!.reimbursed_at).toBe("2026-03-06T00:00:00.000Z");
 	});
 

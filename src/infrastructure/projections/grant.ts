@@ -106,17 +106,31 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 				case "CashAlternativeDeclined":
 					break;
 				case "GrantPaid": {
-					const grantStatus = data.method === "cash" ? "awaiting_reimbursement" : "paid";
+					const grantStatus =
+						data.method === "cash" ? "awaiting_reimbursement" : "paid";
 					await connection.command(
 						"UPDATE grants SET status = ?, amount = ?, payment_method = ?, paid_by = ?, paid_at = ?, updated_at = ? WHERE id = ?",
-						[grantStatus, data.amount, data.method, data.paidBy, data.paidAt, data.paidAt, data.grantId],
+						[
+							grantStatus,
+							data.amount,
+							data.method,
+							data.paidBy,
+							data.paidAt,
+							data.paidAt,
+							data.grantId,
+						],
 					);
 					break;
 				}
 				case "VolunteerReimbursed":
 					await connection.command(
 						"UPDATE grants SET status = 'reimbursed', expense_reference = ?, reimbursed_at = ?, updated_at = ? WHERE id = ?",
-						[data.expenseReference, data.reimbursedAt, data.reimbursedAt, data.grantId],
+						[
+							data.expenseReference,
+							data.reimbursedAt,
+							data.reimbursedAt,
+							data.grantId,
+						],
 					);
 					break;
 				case "SlotReleased":

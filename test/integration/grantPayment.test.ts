@@ -266,11 +266,15 @@ describe("grant payment end-to-end", () => {
 		const appId = "app-bank-no-reimburse";
 		await selectWinner(appId, "07700900031", "Grace", "bank");
 
-		await submitBankDetails(appId, {
-			sortCode: "12-34-56",
-			accountNumber: "12345678",
-			proofOfAddressRef: "poa-ref-1",
-		}, eventStore);
+		await submitBankDetails(
+			appId,
+			{
+				sortCode: "12-34-56",
+				accountNumber: "12345678",
+				proofOfAddressRef: "poa-ref-1",
+			},
+			eventStore,
+		);
 		await approveProofOfAddress(appId, "vol-1", eventStore);
 		await recordPayment(
 			appId,

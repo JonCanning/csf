@@ -627,7 +627,11 @@ describe("evolve", () => {
 				paidAt: "2026-03-10T00:00:00Z",
 			},
 		});
-		expect(state).toMatchObject({ status: "paid", amount: 100, method: "bank" });
+		expect(state).toMatchObject({
+			status: "paid",
+			amount: 100,
+			method: "bank",
+		});
 	});
 
 	test("VolunteerReimbursed → reimbursed state", () => {
@@ -673,6 +677,8 @@ describe("RecordReimbursement", () => {
 	});
 
 	test("throws from initial state", () => {
-		expect(() => decide(reimburseCmd, initialState())).toThrow(IllegalStateError);
+		expect(() => decide(reimburseCmd, initialState())).toThrow(
+			IllegalStateError,
+		);
 	});
 });
