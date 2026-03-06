@@ -1,4 +1,4 @@
-import { CommandHandler } from "@event-driven-io/emmett";
+import { CommandHandler, IllegalStateError } from "@event-driven-io/emmett";
 import type { SQLiteEventStore } from "@event-driven-io/emmett-sqlite";
 import { decide, evolve, initialState } from "../application/decider.ts";
 import type { ApplicationEvent } from "../application/types.ts";
@@ -30,8 +30,8 @@ export async function processLotteryDrawn(
 					state,
 				),
 			);
-		} catch {
-			// Already selected (idempotent replay) — safe to ignore
+		} catch (e) {
+			if (!(e instanceof IllegalStateError)) throw e;
 		}
 	}
 
@@ -51,8 +51,8 @@ export async function processLotteryDrawn(
 					state,
 				),
 			);
-		} catch {
-			// Already not-selected (idempotent replay) — safe to ignore
+		} catch (e) {
+			if (!(e instanceof IllegalStateError)) throw e;
 		}
 	}
 }

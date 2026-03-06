@@ -25,8 +25,7 @@ export const applicationsProjection = sqliteProjection<ApplicationEvent>({
 				applied_at TEXT,
 				accepted_at TEXT,
 				selected_at TEXT,
-				rejected_at TEXT,
-				UNIQUE(applicant_id, month_cycle)
+				rejected_at TEXT
 			)
 		`);
 	},
