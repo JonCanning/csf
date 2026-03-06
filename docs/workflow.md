@@ -59,13 +59,15 @@ flowchart TD
         OFFER_CASH -->|Declines| RELEASE[Slot released<br/>to waitlist]
 
         CASH_MEET --> CASH_DONE([Cash handed<br/>over in person])
-        CASH_DONE --> RECORD
+        CASH_DONE --> CASH_RECORD[✅ Grant recorded<br/>3-month cooldown starts]
+        CASH_RECORD --> REIMBURSE["Volunteer submits<br/>OC expense reference"]
+        REIMBURSE --> REIMBURSED[✅ Volunteer<br/>reimbursed]
 
         CLEARED --> RECHECK[Re-check fund<br/>balance]
-        RECHECK -->|Sufficient ✅| PAY["💸 Pay £40<br/>(transfer or cash)"]
+        RECHECK -->|Sufficient ✅| PAY["💸 Pay £40<br/>(bank transfer)"]
         RECHECK -->|Insufficient ❌| PAUSE[⚠️ Paused<br/>Alert volunteers]
 
-        PAY --> RECORD[✅ Grant recorded<br/>3-month cooldown starts]
+        PAY --> BANK_RECORD[✅ Grant recorded<br/>3-month cooldown starts]
     end
 
     subgraph "⏳ NO-RESPONSE HANDLING"
@@ -88,7 +90,9 @@ flowchart TD
     style REJ_DUP fill:#f44336,color:#fff
     style POOL fill:#2196F3,color:#fff
     style DRAW fill:#9C27B0,color:#fff
-    style RECORD fill:#4CAF50,color:#fff
+    style CASH_RECORD fill:#4CAF50,color:#fff
+    style BANK_RECORD fill:#4CAF50,color:#fff
+    style REIMBURSED fill:#4CAF50,color:#fff
     style PAY fill:#FF9800,color:#fff
     style PAUSE fill:#f44336,color:#fff
 ```
