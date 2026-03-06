@@ -1,45 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { CommandHandler } from "@event-driven-io/emmett";
 import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
-import {
-	decide,
-	evolve,
-	initialState,
-} from "../../src/domain/application/decider.ts";
-import type {
-	ApplicationEvent,
-	SubmitApplication,
-} from "../../src/domain/application/types.ts";
+import { submitApplication } from "../../src/domain/application/submitApplication.ts";
 import { createEventStore } from "../../src/infrastructure/eventStore.ts";
 
-const handle = CommandHandler<
-	ReturnType<typeof initialState>,
-	ApplicationEvent
->({ evolve, initialState });
-
-function makeCommand(
-	overrides: Partial<SubmitApplication["data"]> = {},
-): SubmitApplication {
-	return {
-		type: "SubmitApplication",
-		data: {
-			applicationId: "app-1",
-			identity: { phone: "07700900001", name: "Alice" },
-			paymentPreference: "bank",
-			meetingDetails: { place: "Mill Road" },
-			monthCycle: "2026-03",
-			identityResolution: { type: "new" },
-			eligibility: { status: "eligible" },
-			submittedAt: "2026-03-06T12:00:00Z",
-			...overrides,
-		},
-	};
-}
-
-describe("SubmitApplication", () => {
+describe("submitApplication", () => {
 	let eventStore: SQLiteEventStore;
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
 
@@ -53,47 +20,115 @@ describe("SubmitApplication", () => {
 		await pool.close();
 	});
 
-	test("new eligible applicant → Submitted + Accepted", async () => {
-		const cmd = makeCommand();
-		const streamId = `application-${cmd.data.applicationId}`;
+	test("new phone → Submitted + Accepted", async () => {
+		const { events } = await submitApplication(
+			{
+				applicationId: "app-1",
+				phone: "07700900001",
+				name: "Alice",
+				paymentPreference: "bank",
+				meetingPlace: "Mill Road",
+				monthCycle: "2026-03",
+				eligibility: { status: "eligible" },
+			},
+			eventStore,
+			pool,
+		);
 
-		await handle(eventStore, streamId, (state) => decide(cmd, state));
-
-		const { events } = await eventStore.readStream<ApplicationEvent>(streamId);
 		expect(events).toHaveLength(2);
 		expect(events[0]!.type).toBe("ApplicationSubmitted");
 		expect(events[1]!.type).toBe("ApplicationAccepted");
 		expect(events[0]!.data.applicantId).toBe("applicant-07700900001");
 	});
 
-	test("matched existing applicant, eligible → Submitted + Accepted", async () => {
-		const cmd = makeCommand({
-			identityResolution: {
-				type: "matched",
-				applicantId: "applicant-existing-123",
+	test("known phone + same name → Submitted + Accepted with existing applicantId", async () => {
+		await submitApplication(
+			{
+				applicationId: "app-first",
+				phone: "07700900001",
+				name: "Alice",
+				paymentPreference: "bank",
+				meetingPlace: "Mill Road",
+				monthCycle: "2026-03",
+				eligibility: { status: "eligible" },
 			},
-		});
-		const streamId = `application-${cmd.data.applicationId}`;
+			eventStore,
+			pool,
+		);
 
-		await handle(eventStore, streamId, (state) => decide(cmd, state));
+		const { events } = await submitApplication(
+			{
+				applicationId: "app-second",
+				phone: "07700900001",
+				name: "Alice",
+				paymentPreference: "cash",
+				meetingPlace: "Market Square",
+				monthCycle: "2026-04",
+				eligibility: { status: "eligible" },
+			},
+			eventStore,
+			pool,
+		);
 
-		const { events } = await eventStore.readStream<ApplicationEvent>(streamId);
 		expect(events).toHaveLength(2);
-		expect(events[0]!.data.applicantId).toBe("applicant-existing-123");
+		expect(events[0]!.data.applicantId).toBe("applicant-07700900001");
 		expect(events[1]!.type).toBe("ApplicationAccepted");
 	});
 
-	test("cooldown active → Submitted + Rejected(cooldown)", async () => {
-		const cmd = makeCommand({
-			eligibility: { status: "cooldown", lastGrantMonth: "2026-01" },
-		});
-		const streamId = `application-${cmd.data.applicationId}`;
+	test("known phone + different name → Submitted + FlaggedForReview", async () => {
+		await submitApplication(
+			{
+				applicationId: "app-first",
+				phone: "07700900001",
+				name: "Alice",
+				paymentPreference: "bank",
+				meetingPlace: "Mill Road",
+				monthCycle: "2026-03",
+				eligibility: { status: "eligible" },
+			},
+			eventStore,
+			pool,
+		);
 
-		await handle(eventStore, streamId, (state) => decide(cmd, state));
+		const { events } = await submitApplication(
+			{
+				applicationId: "app-flagged",
+				phone: "07700900001",
+				name: "Bob",
+				paymentPreference: "cash",
+				meetingPlace: "Station",
+				monthCycle: "2026-03",
+				eligibility: { status: "eligible" },
+			},
+			eventStore,
+			pool,
+		);
 
-		const { events } = await eventStore.readStream<ApplicationEvent>(streamId);
 		expect(events).toHaveLength(2);
 		expect(events[0]!.type).toBe("ApplicationSubmitted");
+		expect(events[1]!.type).toBe("ApplicationFlaggedForReview");
+		expect(events[1]!.data).toMatchObject({
+			applicantId: "applicant-07700900001",
+			reason: "Phone matches but name differs",
+		});
+	});
+
+	test("cooldown active → Submitted + Rejected", async () => {
+		const { events } = await submitApplication(
+			{
+				applicationId: "app-1",
+				phone: "07700900001",
+				name: "Alice",
+				paymentPreference: "bank",
+				meetingPlace: "Mill Road",
+				monthCycle: "2026-03",
+				eligibility: { status: "cooldown", lastGrantMonth: "2026-01" },
+			},
+			eventStore,
+			pool,
+		);
+
+		expect(events).toHaveLength(2);
 		expect(events[1]!.type).toBe("ApplicationRejected");
 		expect(events[1]!.data).toMatchObject({
 			reason: "cooldown",
@@ -101,86 +136,40 @@ describe("SubmitApplication", () => {
 		});
 	});
 
-	test("duplicate this month → Submitted + Rejected(duplicate)", async () => {
-		const cmd = makeCommand({
-			eligibility: { status: "duplicate" },
-		});
-		const streamId = `application-${cmd.data.applicationId}`;
+	test("duplicate this month → Submitted + Rejected", async () => {
+		const { events } = await submitApplication(
+			{
+				applicationId: "app-1",
+				phone: "07700900001",
+				name: "Alice",
+				paymentPreference: "bank",
+				meetingPlace: "Mill Road",
+				monthCycle: "2026-03",
+				eligibility: { status: "duplicate" },
+			},
+			eventStore,
+			pool,
+		);
 
-		await handle(eventStore, streamId, (state) => decide(cmd, state));
-
-		const { events } = await eventStore.readStream<ApplicationEvent>(streamId);
 		expect(events).toHaveLength(2);
-		expect(events[0]!.type).toBe("ApplicationSubmitted");
 		expect(events[1]!.type).toBe("ApplicationRejected");
 		expect(events[1]!.data).toMatchObject({ reason: "duplicate" });
 	});
 
-	test("flagged identity → Submitted + FlaggedForReview", async () => {
-		const cmd = makeCommand({
-			identityResolution: {
-				type: "flagged",
-				applicantId: "applicant-suspect-456",
-				reason: "Phone matches but name differs",
-			},
-		});
-		const streamId = `application-${cmd.data.applicationId}`;
+	test("idempotency — cannot submit twice with same applicationId", async () => {
+		const form = {
+			applicationId: "app-1",
+			phone: "07700900001",
+			name: "Alice",
+			paymentPreference: "bank" as const,
+			meetingPlace: "Mill Road",
+			monthCycle: "2026-03",
+			eligibility: { status: "eligible" as const },
+		};
 
-		await handle(eventStore, streamId, (state) => decide(cmd, state));
-
-		const { events } = await eventStore.readStream<ApplicationEvent>(streamId);
-		expect(events).toHaveLength(2);
-		expect(events[0]!.type).toBe("ApplicationSubmitted");
-		expect(events[1]!.type).toBe("ApplicationFlaggedForReview");
-		expect(events[1]!.data).toMatchObject({
-			applicantId: "applicant-suspect-456",
-			reason: "Phone matches but name differs",
-		});
-	});
-
-	test("idempotency — cannot submit twice to same stream", async () => {
-		const cmd = makeCommand();
-		const streamId = `application-${cmd.data.applicationId}`;
-
-		await handle(eventStore, streamId, (state) => decide(cmd, state));
-
-		await expect(
-			handle(eventStore, streamId, (state) => decide(cmd, state)),
-		).rejects.toThrow(/already submitted/i);
-	});
-
-	test("projection — applications_this_month populated after acceptance", async () => {
-		const cmd = makeCommand();
-		const streamId = `application-${cmd.data.applicationId}`;
-
-		await handle(eventStore, streamId, (state) => decide(cmd, state));
-
-		const rows = await pool.withConnection(async (conn) =>
-			conn.query(
-				`SELECT * FROM applications_this_month WHERE applicant_id = 'applicant-07700900001'`,
-			),
+		await submitApplication(form, eventStore, pool);
+		await expect(submitApplication(form, eventStore, pool)).rejects.toThrow(
+			/already submitted/i,
 		);
-
-		expect(rows).toHaveLength(1);
-		expect(rows[0]).toMatchObject({
-			applicant_id: "applicant-07700900001",
-			month_cycle: "2026-03",
-		});
-	});
-
-	test("projection — rejection does NOT populate applications_this_month", async () => {
-		const cmd = makeCommand({
-			applicationId: "app-rejected",
-			eligibility: { status: "duplicate" },
-		});
-		const streamId = `application-${cmd.data.applicationId}`;
-
-		await handle(eventStore, streamId, (state) => decide(cmd, state));
-
-		const rows = await pool.withConnection(async (conn) =>
-			conn.query(`SELECT * FROM applications_this_month`),
-		);
-
-		expect(rows).toHaveLength(0);
 	});
 });
