@@ -4,7 +4,7 @@ import {
 	SQLiteConnectionPool,
 	type SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
-import { eligibilityProjection } from "./projections/eligibility.ts";
+import { applicationsProjection } from "./projections/applications.ts";
 import { recipientProjection } from "./projections/recipient.ts";
 import { volunteerProjection } from "./projections/volunteer.ts";
 
@@ -20,7 +20,7 @@ export function createEventStore(fileName: string): EventStoreWithPool {
 		pool,
 		schema: { autoMigration: "CreateOrUpdate" },
 		projections: inlineProjections([
-			eligibilityProjection,
+			applicationsProjection,
 			recipientProjection,
 			volunteerProjection,
 		]),

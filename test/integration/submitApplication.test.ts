@@ -3,6 +3,9 @@ import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
+import { toApplicantId } from "../../src/domain/application/applicantId.ts";
+import { checkEligibility } from "../../src/domain/application/checkEligibility.ts";
+import { reviewApplication } from "../../src/domain/application/reviewApplication.ts";
 import { submitApplication } from "../../src/domain/application/submitApplication.ts";
 import type { RecipientRepository } from "../../src/domain/recipient/repository.ts";
 import type { RecipientEvent } from "../../src/domain/recipient/types.ts";
@@ -242,6 +245,377 @@ describe("submitApplication", () => {
 		expect(events).toHaveLength(2);
 		expect(events[1]!.type).toBe("ApplicationRejected");
 		expect(events[1]!.data).toMatchObject({ reason: "duplicate" });
+	});
+
+	describe("eligibility end-to-end", () => {
+		test("accepted grant blocks same month (duplicate)", async () => {
+			await submitApplication(
+				{
+					applicationId: "app-1",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2026-03",
+					eligibility: { status: "eligible" },
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			const eligibility = await checkEligibility(
+				toApplicantId("07700900001"),
+				"2026-03",
+				pool,
+			);
+			expect(eligibility).toEqual({ status: "duplicate" });
+
+			const { events } = await submitApplication(
+				{
+					applicationId: "app-2",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2026-03",
+					eligibility,
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			expect(events[1]!.type).toBe("ApplicationRejected");
+			expect(events[1]!.data).toMatchObject({ reason: "duplicate" });
+		});
+
+		test("accepted-only does not trigger cooldown", async () => {
+			await submitApplication(
+				{
+					applicationId: "app-1",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2026-01",
+					eligibility: { status: "eligible" },
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			const eligibility = await checkEligibility(
+				toApplicantId("07700900001"),
+				"2026-03",
+				pool,
+			);
+			expect(eligibility).toEqual({ status: "eligible" });
+		});
+
+		test("selected application triggers cooldown in following months", async () => {
+			await submitApplication(
+				{
+					applicationId: "app-1",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2026-01",
+					eligibility: { status: "eligible" },
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			// Simulate lottery selection
+			await eventStore.appendToStream("application-app-1", [
+				{
+					type: "ApplicationSelected",
+					data: {
+						applicationId: "app-1",
+						applicantId: toApplicantId("07700900001"),
+						monthCycle: "2026-01",
+						rank: 1,
+						selectedAt: new Date().toISOString(),
+					},
+				},
+			]);
+
+			const eligibility = await checkEligibility(
+				toApplicantId("07700900001"),
+				"2026-03",
+				pool,
+			);
+			expect(eligibility).toEqual({
+				status: "cooldown",
+				lastGrantMonth: "2026-01",
+			});
+
+			const { events } = await submitApplication(
+				{
+					applicationId: "app-2",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2026-03",
+					eligibility,
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			expect(events[1]!.type).toBe("ApplicationRejected");
+			expect(events[1]!.data).toMatchObject({ reason: "cooldown" });
+		});
+
+		test("eligible after cooldown expires", async () => {
+			await submitApplication(
+				{
+					applicationId: "app-1",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2025-11",
+					eligibility: { status: "eligible" },
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			// Select so cooldown would apply if within window
+			await eventStore.appendToStream("application-app-1", [
+				{
+					type: "ApplicationSelected",
+					data: {
+						applicationId: "app-1",
+						applicantId: toApplicantId("07700900001"),
+						monthCycle: "2025-11",
+						rank: 1,
+						selectedAt: new Date().toISOString(),
+					},
+				},
+			]);
+
+			const eligibility = await checkEligibility(
+				toApplicantId("07700900001"),
+				"2026-03",
+				pool,
+			);
+			expect(eligibility).toEqual({ status: "eligible" });
+
+			const { events } = await submitApplication(
+				{
+					applicationId: "app-2",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2026-03",
+					eligibility,
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			expect(events[1]!.type).toBe("ApplicationAccepted");
+		});
+
+		test("rejected grant does not block reapplication", async () => {
+			await submitApplication(
+				{
+					applicationId: "app-1",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2026-03",
+					eligibility: { status: "duplicate" },
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			const eligibility = await checkEligibility(
+				toApplicantId("07700900001"),
+				"2026-03",
+				pool,
+			);
+			expect(eligibility).toEqual({ status: "eligible" });
+		});
+	});
+
+	describe("volunteer review of flagged application", () => {
+		async function submitFlagged() {
+			// First application creates the recipient
+			await submitApplication(
+				{
+					applicationId: "app-first",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2026-01",
+					eligibility: { status: "eligible" },
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			// Second application with different name → flagged
+			const { events } = await submitApplication(
+				{
+					applicationId: "app-flagged",
+					phone: "07700900001",
+					name: "Bob",
+					paymentPreference: "cash",
+					meetingPlace: "Station",
+					monthCycle: "2026-06",
+					eligibility: { status: "eligible" },
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			expect(events[1]!.type).toBe("ApplicationFlaggedForReview");
+			return events;
+		}
+
+		test("volunteer confirms eligible flagged application → ApplicationConfirmed", async () => {
+			await submitFlagged();
+
+			const eligibility = await checkEligibility(
+				toApplicantId("07700900001"),
+				"2026-06",
+				pool,
+			);
+
+			const { events } = await reviewApplication(
+				"app-flagged",
+				"vol-1",
+				"confirm",
+				eligibility,
+				eventStore,
+			);
+
+			expect(events).toHaveLength(1);
+			expect(events[0]!.type).toBe("ApplicationConfirmed");
+			expect(events[0]!.data).toMatchObject({
+				volunteerId: "vol-1",
+				applicantId: "applicant-07700900001",
+			});
+		});
+
+		test("volunteer confirms but applicant in cooldown → ApplicationRejected", async () => {
+			await submitFlagged();
+
+			// Select the first application so cooldown triggers
+			await eventStore.appendToStream("application-app-first", [
+				{
+					type: "ApplicationSelected",
+					data: {
+						applicationId: "app-first",
+						applicantId: toApplicantId("07700900001"),
+						monthCycle: "2026-01",
+						rank: 1,
+						selectedAt: new Date().toISOString(),
+					},
+				},
+			]);
+
+			const eligibility = await checkEligibility(
+				toApplicantId("07700900001"),
+				"2026-03",
+				pool,
+			);
+			expect(eligibility.status).toBe("cooldown");
+
+			const { events } = await reviewApplication(
+				"app-flagged",
+				"vol-1",
+				"confirm",
+				eligibility,
+				eventStore,
+			);
+
+			expect(events).toHaveLength(1);
+			expect(events[0]!.type).toBe("ApplicationRejected");
+			expect(events[0]!.data).toMatchObject({
+				reason: "cooldown",
+				volunteerId: "vol-1",
+			});
+		});
+
+		test("volunteer rejects flagged application → ApplicationRejected with identity_mismatch", async () => {
+			await submitFlagged();
+
+			const { events } = await reviewApplication(
+				"app-flagged",
+				"vol-1",
+				"reject",
+				{ status: "eligible" },
+				eventStore,
+			);
+
+			expect(events).toHaveLength(1);
+			expect(events[0]!.type).toBe("ApplicationRejected");
+			expect(events[0]!.data).toMatchObject({
+				reason: "identity_mismatch",
+				volunteerId: "vol-1",
+			});
+		});
+
+		test("confirmed application creates accepted row in applications projection", async () => {
+			await submitFlagged();
+
+			const eligibility = await checkEligibility(
+				toApplicantId("07700900001"),
+				"2026-06",
+				pool,
+			);
+			await reviewApplication(
+				"app-flagged",
+				"vol-1",
+				"confirm",
+				eligibility,
+				eventStore,
+			);
+
+			const apps = await pool.withConnection(async (conn) =>
+				conn.query<{ id: string; status: string }>(
+					"SELECT id, status FROM applications WHERE id = ?",
+					["app-flagged"],
+				),
+			);
+			expect(apps).toHaveLength(1);
+			expect(apps[0]!.status).toBe("accepted");
+		});
+
+		test("cannot review non-flagged application", async () => {
+			await submitApplication(
+				{
+					applicationId: "app-1",
+					phone: "07700900001",
+					name: "Alice",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					monthCycle: "2026-03",
+					eligibility: { status: "eligible" },
+				},
+				eventStore,
+				recipientRepo,
+			);
+
+			await expect(
+				reviewApplication(
+					"app-1",
+					"vol-1",
+					"confirm",
+					{ status: "eligible" },
+					eventStore,
+				),
+			).rejects.toThrow(/cannot review/i);
+		});
 	});
 
 	test("idempotency — cannot submit twice with same applicationId", async () => {
