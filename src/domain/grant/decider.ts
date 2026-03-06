@@ -214,6 +214,17 @@ function decideRecordPayment(
 			`Cannot record payment in ${state.status} state`,
 		);
 	}
+	if (state.status === "poa_approved" && command.data.method !== "bank") {
+		throw new IllegalStateError(
+			"POA-approved grants must be paid by bank transfer",
+		);
+	}
+	if (
+		state.status === "awaiting_cash_handover" &&
+		command.data.method !== "cash"
+	) {
+		throw new IllegalStateError("Cash handover grants must be paid in cash");
+	}
 	return [
 		{
 			type: "GrantPaid",

@@ -329,6 +329,21 @@ describe("RecordPayment", () => {
 			IllegalStateError,
 		);
 	});
+
+	test("poa_approved rejects cash method", () => {
+		expect(() =>
+			decide(
+				{ ...payCmd, data: { ...payCmd.data, method: "cash" as const } },
+				poaApproved(),
+			),
+		).toThrow(IllegalStateError);
+	});
+
+	test("awaiting_cash_handover rejects bank method", () => {
+		expect(() => decide(payCmd, awaitingCashHandover())).toThrow(
+			IllegalStateError,
+		);
+	});
 });
 
 // --- ReleaseSlot ---

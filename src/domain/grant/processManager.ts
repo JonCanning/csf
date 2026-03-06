@@ -27,8 +27,14 @@ export async function processApplicationSelected(
 		),
 	);
 
-	const paymentPreference =
-		(rows[0]?.payment_preference as "bank" | "cash") ?? "cash";
+	if (!rows[0]) {
+		throw new Error(`Application ${applicationId} not found in projection`);
+	}
+	const pref = rows[0].payment_preference;
+	if (pref !== "bank" && pref !== "cash") {
+		throw new Error(`Invalid payment_preference: ${pref}`);
+	}
+	const paymentPreference = pref;
 
 	const streamId = `grant-${applicationId}`;
 	try {
