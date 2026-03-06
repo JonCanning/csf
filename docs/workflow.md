@@ -23,7 +23,7 @@ flowchart TD
         ID -->|No match| NEW[Create new<br/>applicant profile]
 
         EXISTING --> ELIG
-        FLAG -->|Volunteer contacts<br/>& confirms identity| ELIG
+        FLAG -->|Volunteer reviews<br/>& confirms identity| ELIG
         NEW --> ELIG
 
         ELIG{Eligibility<br/>Check}
@@ -106,8 +106,8 @@ stateDiagram-v2
         Submitted --> FlaggedForReview: Known phone,\nname mismatch
         Submitted --> Accepted: Eligibility passed
         Submitted --> Rejected: Cooldown / duplicate
-        FlaggedForReview --> Accepted: Volunteer confirms
-        FlaggedForReview --> Rejected: Volunteer rejects
+        FlaggedForReview --> Confirmed: Volunteer confirms\n+ eligible
+        FlaggedForReview --> Rejected: Volunteer confirms\n+ ineligible, or rejects
     }
 
     state "🎲 Lottery" as lottery {
@@ -161,17 +161,23 @@ stateDiagram-v2
 
 ## Automated vs. Volunteer Actions
 
-### Automated
-- Auto-reply to SMS/email with form link
+### Automated (implemented)
+- Identity resolution (phone + name matching)
 - Eligibility checks (cooldown, duplicates)
+- Recipient profile creation on first application
+
+### Automated (not yet implemented)
+- Auto-reply to SMS/email with form link
 - Lottery draw (auditable random seed)
 - Winner/non-winner notifications
 - Bank details + POA form delivery
 - Reminders for unresponsive winners
 - Waitlist promotion
 
-### Volunteer Actions
-- Resolve identity mismatches (known phone number, different name)
+### Volunteer Actions (implemented)
+- Resolve identity mismatches (review flagged applications)
+
+### Volunteer Actions (not yet implemented)
 - Verify proof of address uploads
 - Contact recipients and hand over cash
 - Handle edge cases / paused payments
@@ -180,14 +186,45 @@ stateDiagram-v2
 
 ## Domain Events
 
+### Application Aggregate (implemented)
+
+| Event | Trigger | What Happens |
+|-------|---------|--------------|
+| `ApplicationSubmitted` | Form completed | Resolve identity → Check eligibility |
+| `ApplicationFlaggedForReview` | Known phone, different name | Auto-notify applicant; add to volunteer queue |
+| `ApplicationConfirmed` | Volunteer confirms flagged applicant | Re-check eligibility → Accept or reject |
+| `ApplicationAccepted` | Eligibility passed | Add to lottery pool |
+| `ApplicationRejected` | Cooldown/duplicate/identity_mismatch | Notify applicant with reason |
+
+### Recipient Aggregate (implemented)
+
+| Event | Trigger | What Happens |
+|-------|---------|--------------|
+| `RecipientCreated` | New applicant submits form | Create recipient profile with phone, name, payment preference |
+| `RecipientUpdated` | Volunteer updates recipient details | Update profile fields |
+| `RecipientDeleted` | Volunteer removes recipient | Soft-delete from read model |
+
+### Volunteer Aggregate (implemented)
+
+| Event | Trigger | What Happens |
+|-------|---------|--------------|
+| `VolunteerCreated` | Admin creates volunteer account | Store name, contact details, password hash |
+| `VolunteerUpdated` | Volunteer updates their profile | Update profile fields |
+| `VolunteerDeleted` | Admin removes volunteer | Soft-delete from read model |
+
+### Grant Lifecycle (projection only — no aggregate yet)
+
+| Event | Trigger | What Happens |
+|-------|---------|--------------|
+| `GrantVolunteerAssigned` | Volunteer assigned to grant | Track which volunteer handles the grant |
+| `GrantPaid` | Transfer sent or cash handed over | Record grant, start 3-month cooldown |
+| `GrantPaymentFailed` | Payment attempt fails | Record failure reason |
+
+### Not Yet Implemented
+
 | Event | Trigger | What Happens |
 |-------|---------|--------------|
 | `FormLinkRequested` | SMS/email received | Auto-reply with unique pre-filled form URL |
-| `ApplicationSubmitted` | Form completed | Resolve identity → Check eligibility |
-| `IdentityFlagged` | Known phone, different name | Auto-notify applicant; add to volunteer queue |
-| `IdentityConfirmed` | Volunteer confirms flagged applicant | Proceed to eligibility check |
-| `ApplicationAccepted` | Eligibility passed | Add to lottery pool |
-| `ApplicationRejected` | Cooldown/duplicate/ineligible | Notify applicant with reason |
 | `ApplicationWindowClosed` | Scheduler (month end) | Query OC balance → Calculate slots → Draw lottery |
 | `LotteryDrawn` | RNG draw complete | Notify winners (bank: send POA form, cash: notify volunteer) + notify non-winners |
 | `BankDetailsSubmitted` | Recipient submits POA + bank details | Add to volunteer verification queue |
@@ -198,8 +235,6 @@ stateDiagram-v2
 | `WinnerUnresponsive` | 14 days no response | Slot held until month end, then released to waitlist |
 | `SlotReleased` | Month end (unresponsive) or cash declined | Release slot to waitlist |
 | `ApplicantDataExpired` | 6 months since last activity | Auto-delete applicant info (retain inbox records) |
-| `CashHandoverCompleted` | Volunteer hands over cash in person | Record grant, start 3-month cooldown |
-| `BankTransferCompleted` | Funds transferred | Record grant, start 3-month cooldown |
 
 ---
 
