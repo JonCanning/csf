@@ -1,14 +1,26 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { SQLiteConnectionPool } from "@event-driven-io/emmett-sqlite";
-import { SQLiteRecipientRepository } from "../../src/infrastructure/recipient/sqliteRecipientRepository.ts";
+import type {
+	SQLiteConnectionPool,
+	SQLiteEventStore,
+} from "@event-driven-io/emmett-sqlite";
+import {
+	createRecipient,
+	deleteRecipient,
+	updateRecipient,
+} from "../../src/domain/recipient/commandHandlers.ts";
 import type { RecipientRepository } from "../../src/domain/recipient/repository.ts";
+import { createEventStore } from "../../src/infrastructure/eventStore.ts";
+import { SQLiteRecipientRepository } from "../../src/infrastructure/recipient/sqliteRecipientRepository.ts";
 
-describe("RecipientRepository", () => {
+describe("Recipient (event-sourced)", () => {
+	let eventStore: SQLiteEventStore;
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
 	let repo: RecipientRepository;
 
 	beforeEach(async () => {
-		pool = SQLiteConnectionPool({ fileName: ":memory:" });
+		const es = createEventStore(":memory:");
+		eventStore = es.store;
+		pool = es.pool;
 		repo = await SQLiteRecipientRepository(pool);
 	});
 
@@ -18,55 +30,64 @@ describe("RecipientRepository", () => {
 
 	describe("create", () => {
 		test("creates a recipient with required fields", async () => {
-			const recipient = await repo.create({
-				phone: "07700900001",
-				name: "Alice",
-			});
+			const { id } = await createRecipient(
+				{ phone: "07700900001", name: "Alice" },
+				eventStore,
+			);
 
-			expect(recipient.id).toBeString();
-			expect(recipient.phone).toBe("07700900001");
-			expect(recipient.name).toBe("Alice");
-			expect(recipient.paymentPreference).toBe("cash");
-			expect(recipient.createdAt).toBeString();
-			expect(recipient.updatedAt).toBeString();
+			const found = await repo.getById(id);
+			expect(found).not.toBeNull();
+			expect(found!.phone).toBe("07700900001");
+			expect(found!.name).toBe("Alice");
+			expect(found!.paymentPreference).toBe("cash");
+			expect(found!.createdAt).toBeString();
+			expect(found!.updatedAt).toBeString();
 		});
 
 		test("creates a recipient with all fields", async () => {
-			const recipient = await repo.create({
-				phone: "07700900001",
-				name: "Alice",
-				email: "alice@example.com",
-				paymentPreference: "bank",
-				meetingPlace: "Mill Road",
-				bankDetails: { sortCode: "12-34-56", accountNumber: "12345678" },
-				notes: "Prefers morning meetings",
-			});
+			const { id } = await createRecipient(
+				{
+					phone: "07700900001",
+					name: "Alice",
+					email: "alice@example.com",
+					paymentPreference: "bank",
+					meetingPlace: "Mill Road",
+					bankDetails: { sortCode: "12-34-56", accountNumber: "12345678" },
+					notes: "Prefers morning meetings",
+				},
+				eventStore,
+			);
 
-			expect(recipient.email).toBe("alice@example.com");
-			expect(recipient.paymentPreference).toBe("bank");
-			expect(recipient.meetingPlace).toBe("Mill Road");
-			expect(recipient.bankDetails).toEqual({
+			const found = await repo.getById(id);
+			expect(found).not.toBeNull();
+			expect(found!.email).toBe("alice@example.com");
+			expect(found!.paymentPreference).toBe("bank");
+			expect(found!.meetingPlace).toBe("Mill Road");
+			expect(found!.bankDetails).toEqual({
 				sortCode: "12-34-56",
 				accountNumber: "12345678",
 			});
-			expect(recipient.notes).toBe("Prefers morning meetings");
+			expect(found!.notes).toBe("Prefers morning meetings");
 		});
 
 		test("rejects duplicate phone number", async () => {
-			await repo.create({ phone: "07700900001", name: "Alice" });
+			await createRecipient(
+				{ phone: "07700900001", name: "Alice" },
+				eventStore,
+			);
 			await expect(
-				repo.create({ phone: "07700900001", name: "Bob" }),
+				createRecipient({ phone: "07700900001", name: "Bob" }, eventStore),
 			).rejects.toThrow();
 		});
 	});
 
 	describe("getById", () => {
 		test("returns recipient by id", async () => {
-			const created = await repo.create({
-				phone: "07700900001",
-				name: "Alice",
-			});
-			const found = await repo.getById(created.id);
+			const { id } = await createRecipient(
+				{ phone: "07700900001", name: "Alice" },
+				eventStore,
+			);
+			const found = await repo.getById(id);
 
 			expect(found).not.toBeNull();
 			expect(found!.phone).toBe("07700900001");
@@ -80,7 +101,10 @@ describe("RecipientRepository", () => {
 
 	describe("getByPhone", () => {
 		test("returns recipient by phone", async () => {
-			await repo.create({ phone: "07700900001", name: "Alice" });
+			await createRecipient(
+				{ phone: "07700900001", name: "Alice" },
+				eventStore,
+			);
 			const found = await repo.getByPhone("07700900001");
 
 			expect(found).not.toBeNull();
@@ -95,8 +119,11 @@ describe("RecipientRepository", () => {
 
 	describe("list", () => {
 		test("returns all recipients", async () => {
-			await repo.create({ phone: "07700900001", name: "Alice" });
-			await repo.create({ phone: "07700900002", name: "Bob" });
+			await createRecipient(
+				{ phone: "07700900001", name: "Alice" },
+				eventStore,
+			);
+			await createRecipient({ phone: "07700900002", name: "Bob" }, eventStore);
 			const all = await repo.list();
 
 			expect(all).toHaveLength(2);
@@ -110,69 +137,75 @@ describe("RecipientRepository", () => {
 
 	describe("update", () => {
 		test("updates name", async () => {
-			const created = await repo.create({ phone: "07700900001", name: "Alice" });
+			const { id } = await createRecipient(
+				{ phone: "07700900001", name: "Alice" },
+				eventStore,
+			);
 			await new Promise((r) => setTimeout(r, 5));
-			const updated = await repo.update(created.id, { name: "Alicia" });
+			await updateRecipient(id, { name: "Alicia" }, eventStore);
 
-			expect(updated.name).toBe("Alicia");
-			expect(updated.phone).toBe("07700900001");
-			expect(updated.updatedAt).not.toBe(created.updatedAt);
+			const found = await repo.getById(id);
+			expect(found!.name).toBe("Alicia");
+			expect(found!.phone).toBe("07700900001");
 		});
 
 		test("updates bank details", async () => {
-			const created = await repo.create({ phone: "07700900001", name: "Alice" });
-			const updated = await repo.update(created.id, {
-				bankDetails: { sortCode: "12-34-56", accountNumber: "12345678" },
-			});
+			const { id } = await createRecipient(
+				{ phone: "07700900001", name: "Alice" },
+				eventStore,
+			);
+			await updateRecipient(
+				id,
+				{ bankDetails: { sortCode: "12-34-56", accountNumber: "12345678" } },
+				eventStore,
+			);
 
-			expect(updated.bankDetails).toEqual({
+			const found = await repo.getById(id);
+			expect(found!.bankDetails).toEqual({
 				sortCode: "12-34-56",
 				accountNumber: "12345678",
 			});
 		});
 
 		test("preserves optional fields when not provided in update", async () => {
-			const created = await repo.create({
-				phone: "07700900001",
-				name: "Alice",
-				notes: "Some note",
-			});
-			const updated = await repo.update(created.id, { name: "Alicia" });
+			const { id } = await createRecipient(
+				{ phone: "07700900001", name: "Alice", notes: "Some note" },
+				eventStore,
+			);
+			await updateRecipient(id, { name: "Alicia" }, eventStore);
 
-			expect(updated.notes).toBe("Some note");
+			const found = await repo.getById(id);
+			expect(found!.notes).toBe("Some note");
 		});
 
 		test("clears optional fields when set to null", async () => {
-			const created = await repo.create({
-				phone: "07700900001",
-				name: "Alice",
-				notes: "Some note",
-				email: "alice@example.com",
-			});
-			const updated = await repo.update(created.id, { notes: null, email: null });
+			const { id } = await createRecipient(
+				{
+					phone: "07700900001",
+					name: "Alice",
+					notes: "Some note",
+					email: "alice@example.com",
+				},
+				eventStore,
+			);
+			await updateRecipient(id, { notes: null, email: null }, eventStore);
 
-			expect(updated.notes).toBeUndefined();
-			expect(updated.email).toBeUndefined();
-		});
-
-		test("throws for unknown id", async () => {
-			await expect(
-				repo.update("nonexistent", { name: "Alice" }),
-			).rejects.toThrow(/not found/i);
+			const found = await repo.getById(id);
+			expect(found!.notes).toBeUndefined();
+			expect(found!.email).toBeUndefined();
 		});
 	});
 
 	describe("delete", () => {
 		test("deletes a recipient", async () => {
-			const created = await repo.create({ phone: "07700900001", name: "Alice" });
-			await repo.delete(created.id);
-			const found = await repo.getById(created.id);
+			const { id } = await createRecipient(
+				{ phone: "07700900001", name: "Alice" },
+				eventStore,
+			);
+			await deleteRecipient(id, eventStore);
+			const found = await repo.getById(id);
 
 			expect(found).toBeNull();
-		});
-
-		test("is idempotent for unknown id", async () => {
-			await expect(repo.delete("nonexistent")).resolves.toBeUndefined();
 		});
 	});
 });

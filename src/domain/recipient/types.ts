@@ -37,3 +37,116 @@ export type UpdateRecipient = {
 	bankDetails?: BankDetails | null;
 	notes?: string | null;
 };
+
+// Commands
+
+import type { Command, Event } from "@event-driven-io/emmett";
+
+export type CreateRecipientCommand = Command<
+	"CreateRecipient",
+	{
+		id: string;
+		phone: string;
+		name: string;
+		email?: string;
+		paymentPreference: PaymentPreference;
+		meetingPlace?: string;
+		bankDetails?: BankDetails;
+		notes?: string;
+		createdAt: string;
+	}
+>;
+
+export type UpdateRecipientCommand = Command<
+	"UpdateRecipient",
+	{
+		id: string;
+		phone: string;
+		name: string;
+		email?: string;
+		paymentPreference: PaymentPreference;
+		meetingPlace?: string;
+		bankDetails?: BankDetails;
+		notes?: string;
+		updatedAt: string;
+	}
+>;
+
+export type DeleteRecipientCommand = Command<
+	"DeleteRecipient",
+	{
+		id: string;
+		deletedAt: string;
+	}
+>;
+
+export type RecipientCommand =
+	| CreateRecipientCommand
+	| UpdateRecipientCommand
+	| DeleteRecipientCommand;
+
+// Events
+
+export type RecipientCreated = Event<
+	"RecipientCreated",
+	{
+		id: string;
+		phone: string;
+		name: string;
+		email?: string;
+		paymentPreference: PaymentPreference;
+		meetingPlace?: string;
+		bankDetails?: BankDetails;
+		notes?: string;
+		createdAt: string;
+	}
+>;
+
+export type RecipientUpdated = Event<
+	"RecipientUpdated",
+	{
+		id: string;
+		phone: string;
+		name: string;
+		email?: string;
+		paymentPreference: PaymentPreference;
+		meetingPlace?: string;
+		bankDetails?: BankDetails;
+		notes?: string;
+		updatedAt: string;
+	}
+>;
+
+export type RecipientDeleted = Event<
+	"RecipientDeleted",
+	{
+		id: string;
+		deletedAt: string;
+	}
+>;
+
+export type RecipientEvent =
+	| RecipientCreated
+	| RecipientUpdated
+	| RecipientDeleted;
+
+export type RecipientEventType = RecipientEvent["type"];
+
+// State
+
+export type RecipientState =
+	| { status: "initial" }
+	| {
+			status: "active";
+			id: string;
+			phone: string;
+			name: string;
+			email?: string;
+			paymentPreference: PaymentPreference;
+			meetingPlace?: string;
+			bankDetails?: BankDetails;
+			notes?: string;
+			createdAt: string;
+			updatedAt: string;
+	  }
+	| { status: "deleted" };

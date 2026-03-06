@@ -1,5 +1,6 @@
 import { CommandHandler } from "@event-driven-io/emmett";
 import type { SQLiteEventStore } from "@event-driven-io/emmett-sqlite";
+import { createRecipient } from "../recipient/commandHandlers.ts";
 import type { RecipientRepository } from "../recipient/repository.ts";
 import { decide, evolve, initialState } from "./decider.ts";
 import { resolveIdentity } from "./resolveIdentity.ts";
@@ -62,13 +63,16 @@ export async function submitApplication(
 
 	if (identityResolution.type === "new") {
 		try {
-			await recipientRepo.create({
-				phone: form.phone,
-				name: form.name,
-				email: form.email,
-				paymentPreference: form.paymentPreference,
-				meetingPlace: form.meetingPlace,
-			});
+			await createRecipient(
+				{
+					phone: form.phone,
+					name: form.name,
+					email: form.email,
+					paymentPreference: form.paymentPreference,
+					meetingPlace: form.meetingPlace,
+				},
+				eventStore,
+			);
 		} catch {
 			// Recipient already exists (race condition) — safe to ignore
 		}
