@@ -4,8 +4,13 @@ import type {
 	ApplicationEvent,
 	ApplicationState,
 	IdentityResolution,
+	RejectFromLottery,
+	ReviewApplication,
+	SelectApplication,
 	SubmitApplication,
 } from "./types.ts";
+
+export type ApplicationCommand = SubmitApplication | ReviewApplication | SelectApplication | RejectFromLottery;
 
 export const initialState = (): ApplicationState => ({ status: "initial" });
 
@@ -23,6 +28,22 @@ function resolveApplicantId(
 }
 
 export function decide(
+	command: ApplicationCommand,
+	state: ApplicationState,
+): ApplicationEvent[] {
+	switch (command.type) {
+		case "SubmitApplication":
+			return decideSubmit(command, state);
+		case "ReviewApplication":
+			return decideReview(command, state);
+		case "SelectApplication":
+			return decideSelect(command, state);
+		case "RejectFromLottery":
+			return decideRejectFromLottery(command, state);
+	}
+}
+
+function decideSubmit(
 	command: SubmitApplication,
 	state: ApplicationState,
 ): ApplicationEvent[] {
@@ -107,6 +128,117 @@ export function decide(
 	];
 }
 
+function decideReview(
+	command: ReviewApplication,
+	state: ApplicationState,
+): ApplicationEvent[] {
+	if (state.status !== "flagged") {
+		throw new IllegalStateError(
+			`Cannot review application in ${state.status} state`,
+		);
+	}
+
+	const { data } = command;
+
+	if (data.decision === "reject") {
+		return [
+			{
+				type: "ApplicationRejected",
+				data: {
+					applicationId: state.applicationId,
+					applicantId: state.applicantId,
+					reason: "identity_mismatch",
+					detail: "Rejected by volunteer review",
+					volunteerId: data.volunteerId,
+					monthCycle: state.monthCycle,
+					rejectedAt: data.reviewedAt,
+				},
+			},
+		];
+	}
+
+	// Confirmed — still need eligibility check
+	if (data.eligibility.status === "eligible") {
+		return [
+			{
+				type: "ApplicationConfirmed",
+				data: {
+					applicationId: state.applicationId,
+					applicantId: state.applicantId,
+					volunteerId: data.volunteerId,
+					monthCycle: state.monthCycle,
+					confirmedAt: data.reviewedAt,
+				},
+			},
+		];
+	}
+
+	const detail =
+		data.eligibility.status === "cooldown"
+			? `Last grant in ${data.eligibility.lastGrantMonth}`
+			: "Already applied this month";
+
+	return [
+		{
+			type: "ApplicationRejected",
+			data: {
+				applicationId: state.applicationId,
+				applicantId: state.applicantId,
+				reason: data.eligibility.status,
+				detail,
+				volunteerId: data.volunteerId,
+				monthCycle: state.monthCycle,
+				rejectedAt: data.reviewedAt,
+			},
+		},
+	];
+}
+
+function decideSelect(
+	command: SelectApplication,
+	state: ApplicationState,
+): ApplicationEvent[] {
+	if (state.status !== "accepted" && state.status !== "confirmed") {
+		throw new IllegalStateError(
+			`Cannot select application in ${state.status} state`,
+		);
+	}
+	return [
+		{
+			type: "ApplicationSelected",
+			data: {
+				applicationId: state.applicationId,
+				applicantId: state.applicantId,
+				monthCycle: state.monthCycle,
+				rank: command.data.rank,
+				selectedAt: command.data.selectedAt,
+			},
+		},
+	];
+}
+
+function decideRejectFromLottery(
+	command: RejectFromLottery,
+	state: ApplicationState,
+): ApplicationEvent[] {
+	if (state.status !== "accepted" && state.status !== "confirmed") {
+		throw new IllegalStateError(
+			`Cannot reject application from lottery in ${state.status} state`,
+		);
+	}
+	return [
+		{
+			type: "ApplicationNotSelected",
+			data: {
+				applicationId: state.applicationId,
+				applicantId: state.applicantId,
+				monthCycle: state.monthCycle,
+				notSelectedAt: command.data.rejectedAt,
+			},
+		},
+	];
+}
+
 export function evolve(
 	state: ApplicationState,
 	event: ApplicationEvent,
@@ -126,6 +258,13 @@ export function evolve(
 				applicantId: event.data.applicantId,
 				monthCycle: event.data.monthCycle,
 			};
+		case "ApplicationConfirmed":
+			return {
+				status: "confirmed",
+				applicationId: event.data.applicationId,
+				applicantId: event.data.applicantId,
+				monthCycle: event.data.monthCycle,
+			};
 		case "ApplicationRejected":
 			return {
 				status: "rejected",
@@ -138,7 +277,23 @@ export function evolve(
 				status: "flagged",
 				applicationId: event.data.applicationId,
 				applicantId: event.data.applicantId,
+				monthCycle: event.data.monthCycle,
 				reason: event.data.reason,
+			};
+		case "ApplicationSelected":
+			return {
+				status: "selected",
+				applicationId: event.data.applicationId,
+				applicantId: event.data.applicantId,
+				monthCycle: event.data.monthCycle,
+				rank: event.data.rank,
+			};
+		case "ApplicationNotSelected":
+			return {
+				status: "not_selected",
+				applicationId: event.data.applicationId,
+				applicantId: event.data.applicantId,
+				monthCycle: event.data.monthCycle,
 			};
 		default: {
 			const _exhaustive: never = event;

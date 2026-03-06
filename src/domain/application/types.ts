@@ -40,6 +40,36 @@ export type SubmitApplication = Command<
 	}
 >;
 
+export type ReviewApplication = Command<
+	"ReviewApplication",
+	{
+		applicationId: string;
+		volunteerId: string;
+		decision: "confirm" | "reject";
+		eligibility: EligibilityResult;
+		reviewedAt: string;
+	}
+>;
+
+export type SelectApplication = Command<
+	"SelectApplication",
+	{
+		applicationId: string;
+		lotteryMonthCycle: string;
+		rank: number;
+		selectedAt: string;
+	}
+>;
+
+export type RejectFromLottery = Command<
+	"RejectFromLottery",
+	{
+		applicationId: string;
+		lotteryMonthCycle: string;
+		rejectedAt: string;
+	}
+>;
+
 // Events
 
 export type ApplicationSubmitted = Event<
@@ -65,13 +95,25 @@ export type ApplicationAccepted = Event<
 	}
 >;
 
+export type ApplicationConfirmed = Event<
+	"ApplicationConfirmed",
+	{
+		applicationId: string;
+		applicantId: string;
+		volunteerId: string;
+		monthCycle: string;
+		confirmedAt: string;
+	}
+>;
+
 export type ApplicationRejected = Event<
 	"ApplicationRejected",
 	{
 		applicationId: string;
 		applicantId: string;
-		reason: "cooldown" | "duplicate";
+		reason: "cooldown" | "duplicate" | "identity_mismatch";
 		detail: string;
+		volunteerId?: string;
 		monthCycle: string;
 		rejectedAt: string;
 	}
@@ -88,11 +130,35 @@ export type ApplicationFlaggedForReview = Event<
 	}
 >;
 
+export type ApplicationSelected = Event<
+	"ApplicationSelected",
+	{
+		applicationId: string;
+		applicantId: string;
+		monthCycle: string;
+		rank: number;
+		selectedAt: string;
+	}
+>;
+
+export type ApplicationNotSelected = Event<
+	"ApplicationNotSelected",
+	{
+		applicationId: string;
+		applicantId: string;
+		monthCycle: string;
+		notSelectedAt: string;
+	}
+>;
+
 export type ApplicationEvent =
 	| ApplicationSubmitted
 	| ApplicationAccepted
+	| ApplicationConfirmed
 	| ApplicationRejected
-	| ApplicationFlaggedForReview;
+	| ApplicationFlaggedForReview
+	| ApplicationSelected
+	| ApplicationNotSelected;
 
 export type ApplicationEventType = ApplicationEvent["type"];
 
@@ -119,8 +185,28 @@ export type ApplicationState =
 			reason: string;
 	  }
 	| {
+			status: "confirmed";
+			applicationId: string;
+			applicantId: string;
+			monthCycle: string;
+	  }
+	| {
 			status: "flagged";
 			applicationId: string;
 			applicantId: string;
+			monthCycle: string;
 			reason: string;
+	  }
+	| {
+			status: "selected";
+			applicationId: string;
+			applicantId: string;
+			monthCycle: string;
+			rank: number;
+	  }
+	| {
+			status: "not_selected";
+			applicationId: string;
+			applicantId: string;
+			monthCycle: string;
 	  };
