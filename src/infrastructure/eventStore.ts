@@ -6,6 +6,7 @@ import {
 } from "@event-driven-io/emmett-sqlite";
 import { eligibilityProjection } from "./projections/eligibility.ts";
 import { recipientProjection } from "./projections/recipient.ts";
+import { volunteerProjection } from "./projections/volunteer.ts";
 
 export type EventStoreWithPool = {
 	store: SQLiteEventStore;
@@ -21,6 +22,7 @@ export function createEventStore(fileName: string): EventStoreWithPool {
 		projections: inlineProjections([
 			eligibilityProjection,
 			recipientProjection,
+			volunteerProjection,
 		]),
 	});
 	return { store, pool };
