@@ -20,6 +20,8 @@ type GrantRow = {
 	payment_method: string | null;
 	paid_by: string | null;
 	paid_at: string | null;
+	expense_reference: string | null;
+	reimbursed_at: string | null;
 	released_reason: string | null;
 	released_at: string | null;
 	created_at: string;
@@ -168,6 +170,101 @@ describe("grantProjection", () => {
 		expect(rows[0]!.amount).toBe(150);
 		expect(rows[0]!.payment_method).toBe("bank");
 		expect(rows[0]!.paid_at).toBe("2026-03-04T00:00:00.000Z");
+	});
+
+	test("cash GrantPaid sets status=awaiting_reimbursement, VolunteerReimbursed sets status=reimbursed", async () => {
+		const id = "g-cash-reimburse";
+
+		await eventStore.appendToStream<GrantEvent>(`grant-${id}`, [
+			{
+				type: "GrantCreated",
+				data: {
+					grantId: id,
+					applicationId: "app-cr",
+					applicantId: "applicant-cr",
+					monthCycle: "2026-03",
+					rank: 1,
+					paymentPreference: "cash",
+					createdAt: "2026-03-01T00:00:00.000Z",
+				},
+			},
+		]);
+
+		await eventStore.appendToStream<GrantEvent>(`grant-${id}`, [
+			{
+				type: "GrantPaid",
+				data: {
+					grantId: id,
+					applicationId: "app-cr",
+					applicantId: "applicant-cr",
+					monthCycle: "2026-03",
+					amount: 40,
+					method: "cash",
+					paidBy: "vol-1",
+					paidAt: "2026-03-05T00:00:00.000Z",
+				},
+			},
+		]);
+
+		let rows = await queryGrant(id);
+		expect(rows[0]!.status).toBe("awaiting_reimbursement");
+		expect(rows[0]!.amount).toBe(40);
+		expect(rows[0]!.payment_method).toBe("cash");
+
+		await eventStore.appendToStream<GrantEvent>(`grant-${id}`, [
+			{
+				type: "VolunteerReimbursed",
+				data: {
+					grantId: id,
+					volunteerId: "vol-1",
+					expenseReference: "https://opencollective.com/csf/expenses/123",
+					reimbursedAt: "2026-03-06T00:00:00.000Z",
+				},
+			},
+		]);
+
+		rows = await queryGrant(id);
+		expect(rows[0]!.status).toBe("reimbursed");
+		expect(rows[0]!.expense_reference).toBe("https://opencollective.com/csf/expenses/123");
+		expect(rows[0]!.reimbursed_at).toBe("2026-03-06T00:00:00.000Z");
+	});
+
+	test("bank GrantPaid sets status=paid (no reimbursement)", async () => {
+		const id = "g-bank-paid";
+
+		await eventStore.appendToStream<GrantEvent>(`grant-${id}`, [
+			{
+				type: "GrantCreated",
+				data: {
+					grantId: id,
+					applicationId: "app-bp",
+					applicantId: "applicant-bp",
+					monthCycle: "2026-03",
+					rank: 1,
+					paymentPreference: "bank",
+					createdAt: "2026-03-01T00:00:00.000Z",
+				},
+			},
+		]);
+
+		await eventStore.appendToStream<GrantEvent>(`grant-${id}`, [
+			{
+				type: "GrantPaid",
+				data: {
+					grantId: id,
+					applicationId: "app-bp",
+					applicantId: "applicant-bp",
+					monthCycle: "2026-03",
+					amount: 40,
+					method: "bank",
+					paidBy: "vol-1",
+					paidAt: "2026-03-05T00:00:00.000Z",
+				},
+			},
+		]);
+
+		const rows = await queryGrant(id);
+		expect(rows[0]!.status).toBe("paid");
 	});
 
 	test("POA rejection cycle, cash alternative offered, declined, slot released", async () => {

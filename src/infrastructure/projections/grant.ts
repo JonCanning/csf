@@ -13,6 +13,7 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 		"CashAlternativeDeclined",
 		"GrantPaid",
 		"SlotReleased",
+		"VolunteerReimbursed",
 	],
 
 	init: async ({ context: { connection } }) => {
@@ -31,6 +32,8 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 				payment_method TEXT,
 				paid_by TEXT,
 				paid_at TEXT,
+				expense_reference TEXT,
+				reimbursed_at TEXT,
 				released_reason TEXT,
 				released_at TEXT,
 				created_at TEXT NOT NULL,
@@ -102,17 +105,18 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 					break;
 				case "CashAlternativeDeclined":
 					break;
-				case "GrantPaid":
+				case "GrantPaid": {
+					const grantStatus = data.method === "cash" ? "awaiting_reimbursement" : "paid";
 					await connection.command(
-						"UPDATE grants SET status = 'paid', amount = ?, payment_method = ?, paid_by = ?, paid_at = ?, updated_at = ? WHERE id = ?",
-						[
-							data.amount,
-							data.method,
-							data.paidBy,
-							data.paidAt,
-							data.paidAt,
-							data.grantId,
-						],
+						"UPDATE grants SET status = ?, amount = ?, payment_method = ?, paid_by = ?, paid_at = ?, updated_at = ? WHERE id = ?",
+						[grantStatus, data.amount, data.method, data.paidBy, data.paidAt, data.paidAt, data.grantId],
+					);
+					break;
+				}
+				case "VolunteerReimbursed":
+					await connection.command(
+						"UPDATE grants SET status = 'reimbursed', expense_reference = ?, reimbursed_at = ?, updated_at = ? WHERE id = ?",
+						[data.expenseReference, data.reimbursedAt, data.reimbursedAt, data.grantId],
 					);
 					break;
 				case "SlotReleased":
