@@ -237,6 +237,22 @@ stateDiagram-v2
 
 ### Grant Aggregate (implemented)
 
+#### Commands
+
+| Command | Who | Allowed States | What Happens |
+|---------|-----|---------------|--------------|
+| `CreateGrant` | System (process manager) | initial | Creates grant stream from ApplicationSelected; routes to bank or cash path |
+| `AssignVolunteer` | Volunteer | any non-terminal | Assigns a volunteer to handle this grant |
+| `SubmitBankDetails` | Recipient | awaiting_bank_details | Submits sort code, account number, and proof of address |
+| `ApproveProofOfAddress` | Volunteer | bank_details_submitted | Approves POA; grant ready for bank payment |
+| `RejectProofOfAddress` | Volunteer | bank_details_submitted | Rejects POA; back to awaiting (or offers cash after 3rd attempt) |
+| `AcceptCashAlternative` | Recipient | offered_cash_alternative | Accepts cash; routes to cash handover |
+| `DeclineCashAlternative` | Recipient | offered_cash_alternative | Declines cash; slot released |
+| `RecordPayment` | Volunteer | poa_approved (bank only), awaiting_cash_handover (cash only) | Records payment; grant complete |
+| `ReleaseSlot` | Volunteer | any non-terminal | Manually releases slot (unresponsive, no-show, etc.) |
+
+#### Events
+
 | Event | Trigger | What Happens |
 |-------|---------|--------------|
 | `GrantCreated` | Process manager reacts to ApplicationSelected | Create grant with payment preference (bank/cash) |
