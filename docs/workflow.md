@@ -172,6 +172,11 @@ stateDiagram-v2
 - Lottery draw (seeded RNG, deterministic, auditable)
 - Selection fan-out (process manager dispatches to application streams)
 
+### Automated (implemented)
+- Grant creation from lottery selection (process manager)
+- Cash alternative offered after 3 failed POA attempts
+- Slot release on cash alternative decline
+
 ### Automated (not yet implemented)
 - Auto-reply to SMS/email with form link
 - Winner/non-winner notifications
@@ -182,10 +187,12 @@ stateDiagram-v2
 ### Volunteer Actions (implemented)
 - Resolve identity mismatches (review flagged applications)
 - Trigger lottery draw (manual, after checking OC balance)
+- Verify proof of address uploads (approve/reject)
+- Assign volunteer to grant
+- Record payment (bank transfer or cash handover)
+- Release slot for unresponsive winners
 
 ### Volunteer Actions (not yet implemented)
-- Verify proof of address uploads
-- Contact recipients and hand over cash
 - Handle edge cases / paused payments
 
 ---
@@ -232,21 +239,27 @@ stateDiagram-v2
 | `ApplicationSelected` | Process manager (post-draw) | Applicant won the lottery; ranked for waitlist |
 | `ApplicationNotSelected` | Process manager (post-draw) | Applicant not selected this month |
 
+### Grant Aggregate (implemented)
+
+| Event | Trigger | What Happens |
+|-------|---------|--------------|
+| `GrantCreated` | Process manager reacts to ApplicationSelected | Create grant with payment preference (bank/cash) |
+| `VolunteerAssigned` | Volunteer claims a grant | Track which volunteer handles the grant |
+| `BankDetailsSubmitted` | Recipient submits POA + bank details | Add to volunteer verification queue |
+| `ProofOfAddressApproved` | Volunteer approves POA | Grant ready for bank payment |
+| `ProofOfAddressRejected` | Volunteer rejects POA (max 3 attempts) | Notify recipient; after 3rd rejection offer cash |
+| `CashAlternativeOffered` | 3rd POA rejection | Offer recipient cash instead of bank transfer |
+| `CashAlternativeAccepted` | Recipient accepts cash | Route to cash handover flow |
+| `CashAlternativeDeclined` | Recipient declines cash | Slot released |
+| `GrantPaid` | Transfer sent or cash handed over | Record grant, start 3-month cooldown |
+| `SlotReleased` | Volunteer releases / cash declined | Release slot to waitlist |
+
 ### Not Yet Implemented
 
 | Event | Trigger | What Happens |
 |-------|---------|--------------|
 | `FormLinkRequested` | SMS/email received | Auto-reply with unique pre-filled form URL |
-| `GrantVolunteerAssigned` | Volunteer assigned to grant | Track which volunteer handles the grant |
-| `GrantPaid` | Transfer sent or cash handed over | Record grant, start 3-month cooldown |
-| `GrantPaymentFailed` | Payment attempt fails | Record failure reason |
-| `BankDetailsSubmitted` | Recipient submits POA + bank details | Add to volunteer verification queue |
-| `ProofOfAddressVerified` | Volunteer approves | Initiate payment |
-| `ProofOfAddressRejected` | Volunteer rejects | Notify recipient, allow retry (max 3) |
-| `CashAlternativeOffered` | Max POA attempts reached | Offer recipient cash instead of bank transfer |
-| `CashAlternativeAccepted` | Recipient accepts cash | Route to cash handover flow |
 | `WinnerUnresponsive` | 14 days no response | Slot held until month end, then released to waitlist |
-| `SlotReleased` | Month end (unresponsive) or cash declined | Release slot to waitlist |
 | `ApplicantDataExpired` | 6 months since last activity | Auto-delete applicant info (retain inbox records) |
 
 ---
