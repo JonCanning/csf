@@ -92,6 +92,16 @@ export type ReleaseSlot = Command<
 	}
 >;
 
+export type RecordReimbursement = Command<
+	"RecordReimbursement",
+	{
+		grantId: string;
+		volunteerId: string;
+		expenseReference: string;
+		reimbursedAt: string;
+	}
+>;
+
 export type GrantCommand =
 	| CreateGrant
 	| AssignVolunteer
@@ -101,7 +111,8 @@ export type GrantCommand =
 	| AcceptCashAlternative
 	| DeclineCashAlternative
 	| RecordPayment
-	| ReleaseSlot;
+	| ReleaseSlot
+	| RecordReimbursement;
 
 // Events
 
@@ -209,6 +220,16 @@ export type SlotReleased = Event<
 	}
 >;
 
+export type VolunteerReimbursed = Event<
+	"VolunteerReimbursed",
+	{
+		grantId: string;
+		volunteerId: string;
+		expenseReference: string;
+		reimbursedAt: string;
+	}
+>;
+
 export type GrantEvent =
 	| GrantCreated
 	| VolunteerAssigned
@@ -219,7 +240,8 @@ export type GrantEvent =
 	| CashAlternativeAccepted
 	| CashAlternativeDeclined
 	| GrantPaid
-	| SlotReleased;
+	| SlotReleased
+	| VolunteerReimbursed;
 
 export type GrantEventType = GrantEvent["type"];
 
@@ -262,6 +284,20 @@ export type GrantState =
 			amount: number;
 			method: "bank" | "cash";
 			paidAt: string;
+	  })
+	| (GrantCore & {
+			status: "awaiting_reimbursement";
+			amount: number;
+			paidBy: string;
+			paidAt: string;
+	  })
+	| (GrantCore & {
+			status: "reimbursed";
+			amount: number;
+			paidBy: string;
+			paidAt: string;
+			expenseReference: string;
+			reimbursedAt: string;
 	  })
 	| (GrantCore & {
 			status: "released";
