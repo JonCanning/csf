@@ -134,6 +134,23 @@ export async function recordPayment(
 	);
 }
 
+export async function recordReimbursement(
+	grantId: string,
+	reimbursement: { volunteerId: string; expenseReference: string },
+	eventStore: SQLiteEventStore,
+): Promise<void> {
+	const now = new Date().toISOString();
+	await handle(eventStore, streamId(grantId), (state: GrantState) =>
+		decide(
+			{
+				type: "RecordReimbursement",
+				data: { grantId, ...reimbursement, reimbursedAt: now },
+			},
+			state,
+		),
+	);
+}
+
 export async function releaseSlot(
 	grantId: string,
 	reason: string,
