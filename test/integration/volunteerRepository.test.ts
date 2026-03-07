@@ -75,6 +75,24 @@ describe("Volunteer (event-sourced)", () => {
 		});
 	});
 
+	describe("isAdmin", () => {
+		test("stores and retrieves isAdmin flag", async () => {
+			await createVolunteer(
+				{ name: "Admin", password: "pw", isAdmin: true },
+				eventStore,
+			);
+			const vol = await repo.getByName("Admin");
+			expect(vol?.isAdmin).toBe(true);
+			expect(vol?.requiresPasswordReset).toBe(true);
+		});
+
+		test("defaults isAdmin to false", async () => {
+			await createVolunteer({ name: "Regular", password: "pw" }, eventStore);
+			const vol = await repo.getByName("Regular");
+			expect(vol?.isAdmin).toBe(false);
+		});
+	});
+
 	describe("getById", () => {
 		test("returns volunteer by id", async () => {
 			const { id } = await createVolunteer(

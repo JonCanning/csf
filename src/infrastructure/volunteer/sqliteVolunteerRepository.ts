@@ -8,6 +8,8 @@ type VolunteerRow = {
 	phone: string | null;
 	email: string | null;
 	password_hash: string;
+	is_admin: number;
+	requires_password_reset: number;
 	created_at: string;
 	updated_at: string;
 };
@@ -18,6 +20,8 @@ function rowToVolunteer(row: VolunteerRow): Volunteer {
 		name: row.name,
 		phone: row.phone ?? undefined,
 		email: row.email ?? undefined,
+		isAdmin: row.is_admin === 1,
+		requiresPasswordReset: row.requires_password_reset === 1,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
@@ -34,6 +38,8 @@ export async function SQLiteVolunteerRepository(
 				phone TEXT,
 				email TEXT,
 				password_hash TEXT NOT NULL,
+				is_admin INTEGER NOT NULL DEFAULT 0,
+				requires_password_reset INTEGER NOT NULL DEFAULT 0,
 				created_at TEXT NOT NULL,
 				updated_at TEXT NOT NULL
 			)
@@ -60,6 +66,15 @@ export async function SQLiteVolunteerRepository(
 				);
 				const row = rows[0];
 				return row ? rowToVolunteer(row) : null;
+			});
+		},
+
+		async getAdmins(): Promise<Volunteer[]> {
+			return await pool.withConnection(async (conn) => {
+				const rows = await conn.query<VolunteerRow>(
+					"SELECT * FROM volunteers WHERE is_admin = 1 ORDER BY name",
+				);
+				return rows.map(rowToVolunteer);
 			});
 		},
 

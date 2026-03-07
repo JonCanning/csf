@@ -8,6 +8,21 @@ import type {
 	VolunteerState,
 } from "./types.ts";
 
+export async function changePassword(
+	id: string,
+	newPassword: string,
+	eventStore: SQLiteEventStore,
+): Promise<void> {
+	const passwordHash = await Bun.password.hash(newPassword);
+	const now = new Date().toISOString();
+	await handle(eventStore, streamId(id), (state) =>
+		decide(
+			{ type: "ChangePassword", data: { id, passwordHash, changedAt: now } },
+			state,
+		),
+	);
+}
+
 const handle = CommandHandler<ReturnType<typeof initialState>, VolunteerEvent>({
 	evolve,
 	initialState,
@@ -35,6 +50,8 @@ export async function createVolunteer(
 					phone: data.phone,
 					email: data.email,
 					passwordHash,
+					isAdmin: data.isAdmin,
+					requiresPasswordReset: true,
 					createdAt: now,
 				},
 			},

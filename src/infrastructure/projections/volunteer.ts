@@ -2,7 +2,12 @@ import { sqliteProjection } from "@event-driven-io/emmett-sqlite";
 import type { VolunteerEvent } from "../../domain/volunteer/types.ts";
 
 export const volunteerProjection = sqliteProjection<VolunteerEvent>({
-	canHandle: ["VolunteerCreated", "VolunteerUpdated", "VolunteerDeleted"],
+	canHandle: [
+		"VolunteerCreated",
+		"VolunteerUpdated",
+		"VolunteerDeleted",
+		"PasswordChanged",
+	],
 
 	init: async ({ context: { connection } }) => {
 		await connection.command(`
@@ -12,6 +17,8 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 				phone TEXT,
 				email TEXT,
 				password_hash TEXT NOT NULL,
+				is_admin INTEGER NOT NULL DEFAULT 0,
+				requires_password_reset INTEGER NOT NULL DEFAULT 0,
 				created_at TEXT NOT NULL,
 				updated_at TEXT NOT NULL
 			)
@@ -24,14 +31,16 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 				case "VolunteerCreated": {
 					const d = event.data;
 					await connection.command(
-						`INSERT INTO volunteers (id, name, phone, email, password_hash, created_at, updated_at)
-						 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+						`INSERT INTO volunteers (id, name, phone, email, password_hash, is_admin, requires_password_reset, created_at, updated_at)
+						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 						[
 							d.id,
 							d.name,
 							d.phone ?? null,
 							d.email ?? null,
 							d.passwordHash,
+							d.isAdmin ? 1 : 0,
+							d.requiresPasswordReset ? 1 : 0,
 							d.createdAt,
 							d.createdAt,
 						],
@@ -52,6 +61,14 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 							d.updatedAt,
 							d.id,
 						],
+					);
+					break;
+				}
+				case "PasswordChanged": {
+					const d = event.data;
+					await connection.command(
+						`UPDATE volunteers SET password_hash = ?, requires_password_reset = 0, updated_at = ? WHERE id = ?`,
+						[d.passwordHash, d.changedAt, d.id],
 					);
 					break;
 				}
