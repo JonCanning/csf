@@ -11,7 +11,7 @@ import {
 import { processLotteryDrawn } from "../../domain/lottery/processManager.ts";
 import type { LotteryDrawn } from "../../domain/lottery/types.ts";
 import { lotteryContent, lotteryPage } from "../pages/lottery.ts";
-import { patchElements, sseResponse } from "../sse.ts";
+import { patchElements, redirectTo, sseResponse } from "../sse.ts";
 
 function currentMonthCycle(): string {
 	const now = new Date();
@@ -26,25 +26,23 @@ async function getWindowStatus(
 	monthCycle: string,
 	pool: ReturnType<typeof SQLiteConnectionPool>,
 ): Promise<"initial" | "open" | "windowClosed" | "drawn"> {
-	const connection = await pool.connection();
-	try {
-		const tableCheck = connection.querySingle<{ name: string }>(
+	return pool.withConnection(async (conn) => {
+		const tableRows = await conn.query<{ name: string }>(
 			"SELECT name FROM sqlite_master WHERE type='table' AND name='lottery_windows'",
 		);
-		if (!tableCheck) return "initial";
+		if (tableRows.length === 0) return "initial";
 
-		const row = connection.querySingle<LotteryWindowRow>(
+		const rows = await conn.query<LotteryWindowRow>(
 			"SELECT month_cycle, status FROM lottery_windows WHERE month_cycle = ? LIMIT 1",
 			[monthCycle],
 		);
+		const row = rows[0];
 		if (!row) return "initial";
 		if (row.status === "open") return "open";
 		if (row.status === "closed") return "windowClosed";
 		if (row.status === "drawn") return "drawn";
 		return "initial";
-	} finally {
-		connection.close();
-	}
+	});
 }
 
 export function createLotteryRoutes(
@@ -109,7 +107,9 @@ export function createLotteryRoutes(
 				await processLotteryDrawn(drawnEvent, eventStore);
 			}
 
-			return Response.redirect(`/applications?month=${monthCycle}`, 303);
+			return sseResponse(
+				redirectTo(`/applications?month=${monthCycle}`),
+			);
 		},
 	};
 }

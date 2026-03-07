@@ -30,6 +30,11 @@ export function removeElements(selector: string): SSEAction {
 	return (stream) => stream.removeElements(selector);
 }
 
+export function redirectTo(url: string): SSEAction {
+	return (stream) =>
+		stream.executeScript(`window.location.href = '${url.replace(/'/g, "\\'")}'`);
+}
+
 export function sseResponse(...actions: SSEAction[]): Response {
 	return ServerSentEventGenerator.stream((stream) => {
 		for (const action of actions) {
