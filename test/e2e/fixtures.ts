@@ -6,12 +6,13 @@ import { test as base, type Page } from "@playwright/test";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type Fixtures = {
-	serverInstance: void;
+	serverInstance: undefined;
 	login: (page: Page) => Promise<void>;
 };
 
 export const test = base.extend<Fixtures>({
 	serverInstance: [
+		// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture API requires destructured object
 		async ({}, use) => {
 			const serverPath = path.resolve(__dirname, "testServer.ts");
 			const proc: ChildProcess = spawn("bun", ["run", serverPath], {
@@ -55,6 +56,7 @@ export const test = base.extend<Fixtures>({
 		{ scope: "test" },
 	],
 
+	// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture API requires destructured object
 	login: async ({}, use) => {
 		await use(async (page: Page) => {
 			await page.goto("/login");

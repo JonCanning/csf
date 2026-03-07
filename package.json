@@ -3,6 +3,9 @@
 	"module": "index.ts",
 	"type": "module",
 	"private": true,
+	"scripts": {
+		"test:e2e": "bunx playwright test"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.6",
 		"@playwright/test": "^1.58.2",
