@@ -145,7 +145,7 @@ export function startServer(
 			if (url.pathname === "/volunteers" && req.method === "POST") {
 				if (!volunteer.isAdmin)
 					return new Response("Forbidden", { status: 403 });
-				return volunteerRoutes.handleCreate(req);
+				return volunteerRoutes.handleCreate(req, volunteer.id);
 			}
 
 			const volEditMatch = url.pathname.match(/^\/volunteers\/([^/]+)\/edit$/);

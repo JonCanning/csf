@@ -102,15 +102,10 @@ describe("editPanel", () => {
 		expect(html).toContain("/volunteers/v-1");
 	});
 
-	test("disables admin checkbox when editing self", () => {
-		const html = editPanel(alice, "v-1");
-		expect(html).toContain("disabled");
-		expect(html).toContain("Cannot change your own admin status");
-	});
-
-	test("does not disable admin checkbox when editing other", () => {
+	test("does not show admin checkbox on edit (creation only)", () => {
 		const html = editPanel(alice, "v-other");
-		expect(html).not.toContain("Cannot change your own admin status");
+		expect(html).not.toContain("data-bind-is-admin");
+		expect(html).toContain("admin status can only be set at creation");
 	});
 });
 

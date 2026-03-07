@@ -75,8 +75,7 @@ function volunteerForm(opts: {
 	isAdmin: boolean;
 	passwordRequired: boolean;
 	passwordHint?: string;
-	adminDisabled: boolean;
-	adminDisabledNote?: string;
+	showAdminCheckbox: boolean;
 	cancelAction: string;
 }): string {
 	const passwordRequired = opts.passwordRequired ? "required" : "";
@@ -84,10 +83,6 @@ function volunteerForm(opts: {
 		? `<p class="text-xs text-bark-muted mt-1">${opts.passwordHint}</p>`
 		: "";
 	const adminChecked = opts.isAdmin ? "checked" : "";
-	const adminDisabled = opts.adminDisabled ? "disabled" : "";
-	const adminNote = opts.adminDisabledNote
-		? `<p class="text-xs text-bark-muted mt-1">${opts.adminDisabledNote}</p>`
-		: "";
 
 	return `
     <div data-signals="{name: '${escapeSignalValue(opts.name)}', phone: '${escapeSignalValue(opts.phone)}', email: '${escapeSignalValue(opts.email)}', password: '', isAdmin: ${opts.isAdmin}}">
@@ -109,13 +104,18 @@ function volunteerForm(opts: {
           <input class="${inputClass}" type="password" data-bind-password ${passwordRequired} />
           ${hintHtml}
         </div>
-        <div class="mb-6">
+        ${
+					opts.showAdminCheckbox
+						? `<div class="mb-6">
           <label class="flex items-center gap-2 font-body text-bark cursor-pointer">
-            <input type="checkbox" data-bind-is-admin ${adminChecked} ${adminDisabled} />
+            <input type="checkbox" data-bind-is-admin ${adminChecked} />
             Admin
           </label>
-          ${adminNote}
-        </div>
+        </div>`
+						: `<div class="mb-6">
+          <p class="text-xs text-bark-muted">${opts.isAdmin ? "Admin" : "Volunteer"} — admin status can only be set at creation</p>
+        </div>`
+				}
         <div class="flex gap-3">
           <button type="submit" class="${btnAmber}">${opts.submitLabel}</button>
           <button type="button" class="${btnSecondary}" data-on-click="${opts.cancelAction}">Cancel</button>
@@ -125,9 +125,7 @@ function volunteerForm(opts: {
   `;
 }
 
-export function editPanel(v: Volunteer, currentVolunteerId: string): string {
-	const isSelf = v.id === currentVolunteerId;
-
+export function editPanel(v: Volunteer, _currentVolunteerId: string): string {
 	return panelWrapper(`
     <div class="flex items-center justify-between mb-6">
       <h2 class="font-heading font-bold text-xl text-bark">Edit Volunteer</h2>
@@ -144,10 +142,7 @@ export function editPanel(v: Volunteer, currentVolunteerId: string): string {
 			isAdmin: v.isAdmin,
 			passwordRequired: false,
 			passwordHint: "Leave blank to keep current",
-			adminDisabled: isSelf,
-			adminDisabledNote: isSelf
-				? "Cannot change your own admin status"
-				: undefined,
+			showAdminCheckbox: false,
 			cancelAction: `@get('/volunteers/${v.id}')`,
 		})}
   `);
@@ -169,7 +164,7 @@ export function createPanel(): string {
 			password: "",
 			isAdmin: false,
 			passwordRequired: true,
-			adminDisabled: false,
+			showAdminCheckbox: true,
 			cancelAction: "@get('/volunteers/close')",
 		})}
   `);

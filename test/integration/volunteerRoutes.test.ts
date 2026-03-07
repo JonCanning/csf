@@ -88,7 +88,7 @@ describe("volunteer routes", () => {
 				isAdmin: false,
 			});
 
-			const res = await routes.handleCreate(req);
+			const res = await routes.handleCreate(req, adminId);
 			expect(res.headers.get("Content-Type")).toBe("text/event-stream");
 
 			const volunteers = await volunteerRepo.list();
@@ -101,7 +101,7 @@ describe("volunteer routes", () => {
 			const req = signalsRequest({
 				password: "secret123",
 			});
-			const res = await routes.handleCreate(req);
+			const res = await routes.handleCreate(req, adminId);
 			expect(res.status).toBe(400);
 		});
 
@@ -109,7 +109,7 @@ describe("volunteer routes", () => {
 			const req = signalsRequest({
 				name: "Charlie",
 			});
-			const res = await routes.handleCreate(req);
+			const res = await routes.handleCreate(req, adminId);
 			expect(res.status).toBe(400);
 		});
 	});
@@ -136,7 +136,7 @@ describe("volunteer routes", () => {
 			expect(updated?.name).toBe("Bobby");
 		});
 
-		test("ignores isAdmin change when editing self", async () => {
+		test("does not change isAdmin on update", async () => {
 			const req = signalsRequest(
 				{
 					name: "Admin Updated",

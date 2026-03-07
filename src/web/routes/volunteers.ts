@@ -50,7 +50,10 @@ export function createVolunteerRoutes(
 			return sseResponse(patchElements('<div id="panel"></div>'));
 		},
 
-		async handleCreate(req: Request): Promise<Response> {
+		async handleCreate(
+			req: Request,
+			currentVolunteerId: string,
+		): Promise<Response> {
 			const result = await ServerSentEventGenerator.readSignals(req);
 			if (!result.success) {
 				return new Response(result.error, { status: 400 });
@@ -67,7 +70,7 @@ export function createVolunteerRoutes(
 			if (!volunteer) return new Response("Not found", { status: 404 });
 			return sseResponse(
 				patchElements(volunteersTableBody(volunteers)),
-				patchElements(viewPanel(volunteer, "")),
+				patchElements(viewPanel(volunteer, currentVolunteerId)),
 			);
 		},
 
@@ -80,8 +83,7 @@ export function createVolunteerRoutes(
 			if (!result.success) {
 				return new Response(result.error, { status: 400 });
 			}
-			const isSelf = id === currentVolunteerId;
-			const data = signalsToVolunteerUpdateData(result.signals, isSelf);
+			const data = signalsToVolunteerUpdateData(result.signals);
 			if (!data) {
 				return new Response("Name is required", { status: 400 });
 			}
@@ -132,10 +134,7 @@ function signalsToVolunteerCreateData(signals: Record<string, unknown>): {
 	};
 }
 
-function signalsToVolunteerUpdateData(
-	signals: Record<string, unknown>,
-	_isSelf: boolean,
-): {
+function signalsToVolunteerUpdateData(signals: Record<string, unknown>): {
 	name?: string;
 	phone?: string;
 	email?: string;
