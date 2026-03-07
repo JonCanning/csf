@@ -18,5 +18,5 @@ run = "bun --hot src/web/index.ts"
 description = "Start the dev server with hot reload"
 
 [tasks.dev]
-run = "mise run css ::: server"
-description = "Start CSS watcher and dev server in parallel"
+run = "rm -f csf.db && mise run seed && mise run css ::: server"
+description = "Reset DB, seed, and start CSS watcher and dev server in parallel"
