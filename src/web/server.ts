@@ -1,4 +1,7 @@
-import type { SQLiteEventStore } from "@event-driven-io/emmett-sqlite";
+import type {
+	SQLiteConnectionPool,
+	SQLiteEventStore,
+} from "@event-driven-io/emmett-sqlite";
 import type { RecipientRepository } from "../domain/recipient/repository.ts";
 import type { VolunteerRepository } from "../domain/volunteer/repository.ts";
 import { getSessionId } from "../infrastructure/auth/cookie.ts";
@@ -6,6 +9,7 @@ import type { SessionStore } from "../infrastructure/session/sqliteSessionStore.
 import { changePasswordPage } from "./pages/changePassword.ts";
 import { dashboardPage } from "./pages/dashboard.ts";
 import { loginPage } from "./pages/login.ts";
+import { createApplyRoutes } from "./routes/apply.ts";
 import {
 	handleChangePassword,
 	handleLogin,
@@ -31,11 +35,13 @@ export function startServer(
 	volunteerRepo: VolunteerRepository,
 	recipientRepo: RecipientRepository,
 	eventStore: SQLiteEventStore,
+	pool: ReturnType<typeof SQLiteConnectionPool>,
 	port = 3000,
 ) {
 	const login = handleLogin(sessionStore, volunteerRepo);
 	const logout = handleLogout(sessionStore);
 	const loginHtml = loginPage();
+	const applyRoutes = createApplyRoutes(eventStore, pool, recipientRepo);
 	const recipientRoutes = createRecipientRoutes(recipientRepo, eventStore);
 	const volunteerRoutes = createVolunteerRoutes(volunteerRepo, eventStore);
 	const changePasswordHandler = handleChangePassword(volunteerRepo, eventStore);
@@ -47,6 +53,13 @@ export function startServer(
 	return Bun.serve({
 		port,
 		routes: {
+			"/apply": {
+				GET: () => applyRoutes.showForm(),
+				POST: (req) => applyRoutes.handleSubmit(req),
+			},
+			"/apply/result": {
+				GET: (req) => applyRoutes.showResult(req),
+			},
 			"/styles/app.css": {
 				GET: async () => {
 					const file = Bun.file("src/web/styles/dist/app.css");

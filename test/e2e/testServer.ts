@@ -26,6 +26,7 @@ const server = startServer(
 	volunteerRepo,
 	recipientRepo,
 	eventStore,
+	pool,
 	port,
 );
 

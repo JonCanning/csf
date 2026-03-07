@@ -16,6 +16,7 @@ const server = startServer(
 	volunteerRepo,
 	recipientRepo,
 	eventStore,
+	pool,
 );
 
 console.log(`CSF server running at http://localhost:${server.port}`);
