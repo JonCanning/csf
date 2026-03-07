@@ -1,29 +1,41 @@
-type PatchOptions = {
+import { ServerSentEventGenerator } from "@starfederation/datastar-sdk/web";
+
+type PatchElementsOptions = {
 	selector?: string;
-	mode?: "outer" | "inner" | "replace" | "prepend" | "append" | "before" | "after" | "remove";
+	mode?:
+		| "outer"
+		| "inner"
+		| "replace"
+		| "prepend"
+		| "append"
+		| "before"
+		| "after"
+		| "remove";
 };
 
-export function patchElements(html: string, options?: PatchOptions): string {
-	let event = "event: datastar-patch-elements\n";
-	if (options?.selector) event += `data: selector ${options.selector}\n`;
-	if (options?.mode) event += `data: mode ${options.mode}\n`;
-	const lines = html.split("\n");
-	for (const line of lines) {
-		event += `data: elements ${line}\n`;
-	}
-	event += "\n";
-	return event;
+type SSEAction = (stream: ServerSentEventGenerator) => void;
+
+export function patchElements(
+	html: string,
+	options?: PatchElementsOptions,
+): SSEAction {
+	return (stream) => stream.patchElements(html, options);
 }
 
-export function patchSignals(signals: Record<string, unknown>): string {
-	return `event: datastar-patch-signals\ndata: signals ${JSON.stringify(signals)}\n\n`;
+export function patchSignals(signals: Record<string, unknown>): SSEAction {
+	return (stream) => stream.patchSignals(JSON.stringify(signals));
 }
 
-export function sseResponse(...events: string[]): Response {
-	return new Response(events.join(""), {
-		headers: {
-			"Content-Type": "text/event-stream",
-			"Cache-Control": "no-cache",
-		},
+export function removeElements(selector: string): SSEAction {
+	return (stream) => stream.removeElements(selector);
+}
+
+export function sseResponse(...actions: SSEAction[]): Response {
+	return ServerSentEventGenerator.stream((stream) => {
+		for (const action of actions) {
+			action(stream);
+		}
 	});
 }
+
+export { ServerSentEventGenerator };

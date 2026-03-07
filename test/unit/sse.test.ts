@@ -1,34 +1,48 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { patchElements, patchSignals, sseResponse } from "../../src/web/sse";
 
 describe("SSE helpers", () => {
-	test("patchElements formats a single fragment", () => {
-		const result = patchElements('<div id="panel">Hello</div>');
-		expect(result).toBe('event: datastar-patch-elements\ndata: elements <div id="panel">Hello</div>\n\n');
+	test("patchElements returns an action function", () => {
+		const action = patchElements('<div id="panel">Hello</div>');
+		expect(typeof action).toBe("function");
 	});
 
-	test("patchElements with mode and selector", () => {
-		const result = patchElements("<p>Hi</p>", { selector: "#target", mode: "inner" });
-		expect(result).toBe(
-			"event: datastar-patch-elements\ndata: selector #target\ndata: mode inner\ndata: elements <p>Hi</p>\n\n"
-		);
+	test("patchSignals returns an action function", () => {
+		const action = patchSignals({ search: "", panelOpen: false });
+		expect(typeof action).toBe("function");
 	});
 
-	test("patchElements handles multiline HTML", () => {
-		const html = '<div id="x">\n  <p>Line1</p>\n  <p>Line2</p>\n</div>';
-		const result = patchElements(html);
-		expect(result).toContain("data: elements <div");
-		expect(result).toContain("data: elements   <p>Line1</p>");
-	});
-
-	test("patchSignals formats signals object", () => {
-		const result = patchSignals({ search: "", panelOpen: false });
-		expect(result).toBe('event: datastar-patch-signals\ndata: signals {"search":"","panelOpen":false}\n\n');
-	});
-
-	test("sseResponse creates Response with correct headers", () => {
-		const res = sseResponse("event: datastar-patch-elements\ndata: elements <div>hi</div>\n\n");
+	test("sseResponse creates Response with correct headers", async () => {
+		const res = sseResponse(patchElements('<div id="panel">Hello</div>'));
 		expect(res.headers.get("Content-Type")).toBe("text/event-stream");
 		expect(res.headers.get("Cache-Control")).toBe("no-cache");
+	});
+
+	test("sseResponse body contains SSE event data", async () => {
+		const res = sseResponse(patchElements('<div id="panel">Hello</div>'));
+		const body = await res.text();
+		expect(body).toContain("datastar-patch-elements");
+		expect(body).toContain("Hello");
+	});
+
+	test("sseResponse handles multiple actions", async () => {
+		const res = sseResponse(
+			patchElements('<div id="a">First</div>'),
+			patchSignals({ foo: "bar" }),
+		);
+		const body = await res.text();
+		expect(body).toContain("datastar-patch-elements");
+		expect(body).toContain("datastar-patch-signals");
+		expect(body).toContain("First");
+		expect(body).toContain("bar");
+	});
+
+	test("patchElements with mode and selector", async () => {
+		const res = sseResponse(
+			patchElements("<p>Hi</p>", { selector: "#target", mode: "inner" }),
+		);
+		const body = await res.text();
+		expect(body).toContain("selector #target");
+		expect(body).toContain("mode inner");
 	});
 });
