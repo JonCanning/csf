@@ -34,68 +34,44 @@ describe("auth routes", () => {
 	});
 
 	describe("POST /login", () => {
-		test("returns SSE with cookie on valid credentials", async () => {
-			const login = handleLogin(sessionStore, volunteerRepo);
-			const req = new Request("http://localhost/login", {
+		function loginRequest(name: string, password: string): Request {
+			const body = new URLSearchParams({ name, password });
+			return new Request("http://localhost/login", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					name: "Alice",
-					password: "correct-password",
-				}),
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: body.toString(),
 			});
-			const res = await login(req);
-			expect(res.status).toBe(200);
-			expect(res.headers.get("content-type")).toBe("text/event-stream");
-			const body = await res.text();
-			expect(body).toContain("document.cookie");
-			expect(body).toContain("window.location.href");
+		}
+
+		test("redirects with cookie on valid credentials", async () => {
+			const login = handleLogin(sessionStore, volunteerRepo);
+			const res = await login(loginRequest("Alice", "correct-password"));
+			expect(res.status).toBe(302);
+			expect(res.headers.get("location")).toBe("/");
+			expect(res.headers.get("set-cookie")).toContain("session=");
 		});
 
-		test("returns SSE error on wrong password", async () => {
+		test("returns error on wrong password", async () => {
 			const login = handleLogin(sessionStore, volunteerRepo);
-			const req = new Request("http://localhost/login", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					name: "Alice",
-					password: "wrong",
-				}),
-			});
-			const res = await login(req);
-			expect(res.status).toBe(200);
+			const res = await login(loginRequest("Alice", "wrong"));
+			expect(res.status).toBe(401);
 			const body = await res.text();
 			expect(body).toContain("Invalid name or password");
 		});
 
-		test("returns SSE error on unknown user", async () => {
+		test("returns error on unknown user", async () => {
 			const login = handleLogin(sessionStore, volunteerRepo);
-			const req = new Request("http://localhost/login", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					name: "Nobody",
-					password: "whatever",
-				}),
-			});
-			const res = await login(req);
+			const res = await login(loginRequest("Nobody", "whatever"));
+			expect(res.status).toBe(401);
 			const body = await res.text();
 			expect(body).toContain("Invalid name or password");
 		});
 
 		test("name lookup is case-insensitive", async () => {
 			const login = handleLogin(sessionStore, volunteerRepo);
-			const req = new Request("http://localhost/login", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					name: "alice",
-					password: "correct-password",
-				}),
-			});
-			const res = await login(req);
-			const body = await res.text();
-			expect(body).toContain("document.cookie");
+			const res = await login(loginRequest("alice", "correct-password"));
+			expect(res.status).toBe(302);
+			expect(res.headers.get("set-cookie")).toContain("session=");
 		});
 	});
 
