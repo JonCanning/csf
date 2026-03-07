@@ -6,7 +6,8 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 	canHandle: [
 		"VolunteerCreated",
 		"VolunteerUpdated",
-		"VolunteerDeleted",
+		"VolunteerDisabled",
+		"VolunteerEnabled",
 		"PasswordChanged",
 	],
 
@@ -20,8 +21,8 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 				case "VolunteerCreated": {
 					const d = event.data;
 					await connection.command(
-						`INSERT INTO volunteers (id, name, phone, email, password_hash, is_admin, requires_password_reset, created_at, updated_at)
-						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						`INSERT INTO volunteers (id, name, phone, email, password_hash, is_admin, is_disabled, requires_password_reset, created_at, updated_at)
+						 VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
 						[
 							d.id,
 							d.name,
@@ -40,13 +41,14 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 					const d = event.data;
 					await connection.command(
 						`UPDATE volunteers SET
-							name = ?, phone = ?, email = ?, password_hash = ?, updated_at = ?
+							name = ?, phone = ?, email = ?, password_hash = ?, is_admin = COALESCE(?, is_admin), updated_at = ?
 						WHERE id = ?`,
 						[
 							d.name,
 							d.phone ?? null,
 							d.email ?? null,
 							d.passwordHash,
+							d.isAdmin != null ? (d.isAdmin ? 1 : 0) : null,
 							d.updatedAt,
 							d.id,
 						],
@@ -61,10 +63,18 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 					);
 					break;
 				}
-				case "VolunteerDeleted": {
-					await connection.command("DELETE FROM volunteers WHERE id = ?", [
-						event.data.id,
-					]);
+				case "VolunteerDisabled": {
+					await connection.command(
+						"UPDATE volunteers SET is_disabled = 1, updated_at = ? WHERE id = ?",
+						[event.data.disabledAt, event.data.id],
+					);
+					break;
+				}
+				case "VolunteerEnabled": {
+					await connection.command(
+						"UPDATE volunteers SET is_disabled = 0, updated_at = ? WHERE id = ?",
+						[event.data.enabledAt, event.data.id],
+					);
 					break;
 				}
 			}

@@ -182,6 +182,7 @@ function signalsToVolunteerUpdateData(signals: Record<string, unknown>): {
 	phone?: string | null;
 	email?: string | null;
 	password?: string;
+	isAdmin?: boolean;
 } | null {
 	const name = String(signals.name ?? "").trim();
 	if (!name) return null;
@@ -196,6 +197,7 @@ function signalsToVolunteerUpdateData(signals: Record<string, unknown>): {
 		phone: phone || null,
 		email: email || null,
 		password,
+		isAdmin: signals.isAdmin === true,
 	};
 }
 

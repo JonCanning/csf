@@ -36,15 +36,28 @@ export function decide(
 				},
 			];
 		}
-		case "DeleteVolunteer": {
+		case "DisableVolunteer": {
 			if (state.status !== "active") {
 				throw new IllegalStateError(
-					`Cannot delete volunteer in ${state.status} state`,
+					`Cannot disable volunteer in ${state.status} state`,
 				);
 			}
 			return [
 				{
-					type: "VolunteerDeleted",
+					type: "VolunteerDisabled",
+					data: command.data,
+				},
+			];
+		}
+		case "EnableVolunteer": {
+			if (state.status !== "disabled") {
+				throw new IllegalStateError(
+					`Cannot enable volunteer in ${state.status} state`,
+				);
+			}
+			return [
+				{
+					type: "VolunteerEnabled",
 					data: command.data,
 				},
 			];
@@ -84,19 +97,32 @@ export function evolve(
 				updatedAt: event.data.createdAt,
 			};
 		case "VolunteerUpdated":
-			if (state.status !== "active") return state;
+			if (state.status === "initial") return state;
 			return {
 				...state,
 				name: event.data.name,
 				phone: event.data.phone,
 				email: event.data.email,
 				passwordHash: event.data.passwordHash,
+				isAdmin: event.data.isAdmin ?? state.isAdmin,
 				updatedAt: event.data.updatedAt,
 			};
-		case "VolunteerDeleted":
-			return { status: "deleted" };
+		case "VolunteerDisabled":
+			if (state.status === "initial") return state;
+			return {
+				...state,
+				status: "disabled",
+				updatedAt: event.data.disabledAt,
+			};
+		case "VolunteerEnabled":
+			if (state.status === "initial") return state;
+			return {
+				...state,
+				status: "active",
+				updatedAt: event.data.enabledAt,
+			};
 		case "PasswordChanged":
-			if (state.status !== "active") return state;
+			if (state.status === "initial") return state;
 			return {
 				...state,
 				passwordHash: event.data.passwordHash,

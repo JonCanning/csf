@@ -146,7 +146,7 @@ describe("volunteer routes", () => {
 			expect(updated?.name).toBe("Bobby");
 		});
 
-		test("does not change isAdmin on update", async () => {
+		test("can toggle isAdmin on update", async () => {
 			const req = signalsRequest(
 				{
 					name: "Admin Updated",
@@ -160,7 +160,7 @@ describe("volunteer routes", () => {
 
 			const updated = await volunteerRepo.getById(adminId);
 			expect(updated?.name).toBe("Admin Updated");
-			expect(updated?.isAdmin).toBe(true);
+			expect(updated?.isAdmin).toBe(false);
 		});
 	});
 

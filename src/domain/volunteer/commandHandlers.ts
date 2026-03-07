@@ -85,6 +85,7 @@ export async function updateVolunteer(
 			phone: data.phone === null ? undefined : (data.phone ?? state.phone),
 			email: data.email === null ? undefined : (data.email ?? state.email),
 			passwordHash: passwordHash ?? state.passwordHash,
+			isAdmin: data.isAdmin ?? state.isAdmin,
 			updatedAt: now,
 		};
 
@@ -92,13 +93,24 @@ export async function updateVolunteer(
 	});
 }
 
-export async function deleteVolunteer(
+export async function disableVolunteer(
 	id: string,
 	eventStore: SQLiteEventStore,
 ): Promise<void> {
 	const now = new Date().toISOString();
 
 	await handle(eventStore, streamId(id), (state) =>
-		decide({ type: "DeleteVolunteer", data: { id, deletedAt: now } }, state),
+		decide({ type: "DisableVolunteer", data: { id, disabledAt: now } }, state),
+	);
+}
+
+export async function enableVolunteer(
+	id: string,
+	eventStore: SQLiteEventStore,
+): Promise<void> {
+	const now = new Date().toISOString();
+
+	await handle(eventStore, streamId(id), (state) =>
+		decide({ type: "EnableVolunteer", data: { id, enabledAt: now } }, state),
 	);
 }

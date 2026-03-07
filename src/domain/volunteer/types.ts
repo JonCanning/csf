@@ -4,6 +4,7 @@ export type Volunteer = {
 	phone?: string;
 	email?: string;
 	isAdmin: boolean;
+	isDisabled: boolean;
 	requiresPasswordReset: boolean;
 	createdAt: string;
 	updatedAt: string;
@@ -22,6 +23,7 @@ export type UpdateVolunteer = {
 	phone?: string | null;
 	email?: string | null;
 	password?: string;
+	isAdmin?: boolean;
 };
 
 // Commands
@@ -50,15 +52,24 @@ export type UpdateVolunteerCommand = Command<
 		phone?: string;
 		email?: string;
 		passwordHash: string;
+		isAdmin?: boolean;
 		updatedAt: string;
 	}
 >;
 
-export type DeleteVolunteerCommand = Command<
-	"DeleteVolunteer",
+export type DisableVolunteerCommand = Command<
+	"DisableVolunteer",
 	{
 		id: string;
-		deletedAt: string;
+		disabledAt: string;
+	}
+>;
+
+export type EnableVolunteerCommand = Command<
+	"EnableVolunteer",
+	{
+		id: string;
+		enabledAt: string;
 	}
 >;
 
@@ -74,7 +85,8 @@ export type ChangePasswordCommand = Command<
 export type VolunteerCommand =
 	| CreateVolunteerCommand
 	| UpdateVolunteerCommand
-	| DeleteVolunteerCommand
+	| DisableVolunteerCommand
+	| EnableVolunteerCommand
 	| ChangePasswordCommand;
 
 // Events
@@ -101,15 +113,24 @@ export type VolunteerUpdated = Event<
 		phone?: string;
 		email?: string;
 		passwordHash: string;
+		isAdmin?: boolean;
 		updatedAt: string;
 	}
 >;
 
-export type VolunteerDeleted = Event<
-	"VolunteerDeleted",
+export type VolunteerDisabled = Event<
+	"VolunteerDisabled",
 	{
 		id: string;
-		deletedAt: string;
+		disabledAt: string;
+	}
+>;
+
+export type VolunteerEnabled = Event<
+	"VolunteerEnabled",
+	{
+		id: string;
+		enabledAt: string;
 	}
 >;
 
@@ -125,7 +146,8 @@ export type PasswordChanged = Event<
 export type VolunteerEvent =
 	| VolunteerCreated
 	| VolunteerUpdated
-	| VolunteerDeleted
+	| VolunteerDisabled
+	| VolunteerEnabled
 	| PasswordChanged;
 
 export type VolunteerEventType = VolunteerEvent["type"];
@@ -135,7 +157,7 @@ export type VolunteerEventType = VolunteerEvent["type"];
 export type VolunteerState =
 	| { status: "initial" }
 	| {
-			status: "active";
+			status: "active" | "disabled";
 			id: string;
 			name: string;
 			phone?: string;
@@ -145,5 +167,4 @@ export type VolunteerState =
 			requiresPasswordReset: boolean;
 			createdAt: string;
 			updatedAt: string;
-	  }
-	| { status: "deleted" };
+	  };

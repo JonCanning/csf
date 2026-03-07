@@ -62,28 +62,27 @@ describe("editPanel", () => {
 		expect(html).toContain("/volunteers/v-1");
 	});
 
-	test("does not show admin checkbox on edit (creation only)", () => {
+	test("shows admin checkbox on edit", () => {
 		const html = editPanel(alice, "v-other");
-		expect(html).not.toContain("data-bind-is-admin");
-		expect(html).toContain("admin status can only be set at creation");
+		expect(html).toContain("data-bind-is-admin");
 	});
 
 	test("shows disable button for other volunteers", () => {
 		const html = editPanel(alice, "v-other");
-		expect(html).toContain("Disable Account");
+		expect(html).toContain(">Disable<");
 		expect(html).toContain("confirmDisable");
 	});
 
 	test("hides disable button for self", () => {
 		const html = editPanel(alice, "v-1");
-		expect(html).not.toContain("Disable Account");
-		expect(html).not.toContain("Enable Account");
+		expect(html).not.toContain(">Disable<");
+		expect(html).not.toContain(">Enable<");
 	});
 
 	test("shows enable button for disabled volunteers", () => {
 		const html = editPanel(disabledVol, "v-other");
-		expect(html).toContain("Enable Account");
-		expect(html).not.toContain("Disable Account");
+		expect(html).toContain(">Enable<");
+		expect(html).not.toContain(">Disable<");
 	});
 
 	test("renders Details and History tabs", () => {

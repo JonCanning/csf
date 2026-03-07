@@ -29,8 +29,9 @@ function volunteerForm(opts: {
 	isAdmin: boolean;
 	passwordRequired: boolean;
 	passwordHint?: string;
-	showAdminCheckbox: boolean;
 	cancelAction: string;
+	disableAction?: string;
+	enableAction?: string;
 }): string {
 	const passwordRequired = opts.passwordRequired ? "required" : "";
 	const hintHtml = opts.passwordHint
@@ -56,21 +57,27 @@ function volunteerForm(opts: {
           <input class="${inputClass}" type="password" data-bind-password ${passwordRequired} />
           ${hintHtml}
         </div>
-        ${
-					opts.showAdminCheckbox
-						? `<div class="mb-6">
+        <div class="mb-6">
           <label class="flex items-center gap-2 font-body text-bark cursor-pointer">
             <input type="checkbox" data-bind-is-admin />
             Admin
           </label>
-        </div>`
-						: `<div class="mb-6">
-          <p class="text-xs text-bark-muted">${opts.isAdmin ? "Admin" : "Volunteer"} — admin status can only be set at creation</p>
-        </div>`
-				}
-        <div class="flex gap-3">
+        </div>
+        <div class="flex gap-3" data-signals="{confirmDisable: false}">
           <button type="submit" class="${btnAmber}">${opts.submitLabel}</button>
           <button type="button" class="${btnSecondary}" data-on-click="${opts.cancelAction}">Cancel</button>
+          ${
+						opts.enableAction
+							? `<button type="button" class="${btnSecondary} ml-auto" data-on-click="${opts.enableAction}">Enable</button>`
+							: opts.disableAction
+								? `<button type="button" class="${btnSecondary} ml-auto" data-show="!$confirmDisable" data-on-click="$confirmDisable = true">Disable</button>
+          <span data-show="$confirmDisable" class="flex items-center gap-2 ml-auto" style="display:none">
+            <span class="font-body text-bark-muted text-sm">Sure?</span>
+            <button type="button" class="px-3 py-1 rounded-md text-sm font-semibold bg-red-600 text-white cursor-pointer border-none hover:bg-red-700 transition-colors" data-on-click="${opts.disableAction}">Confirm</button>
+            <button type="button" class="${btnSecondary}" data-on-click="$confirmDisable = false">No</button>
+          </span>`
+								: ""
+					}
         </div>
       </form>
     </div>
@@ -79,21 +86,6 @@ function volunteerForm(opts: {
 
 export function editPanel(v: Volunteer, currentVolunteerId: string): string {
 	const isSelf = v.id === currentVolunteerId;
-
-	const disableToggle = isSelf
-		? ""
-		: v.isDisabled
-			? `<div class="mt-6 pt-4 border-t border-cream-200">
-        <button class="${btnSecondary}" data-on-click="@post('/volunteers/${v.id}/enable')">Enable Account</button>
-      </div>`
-			: `<div class="mt-6 pt-4 border-t border-cream-200" data-signals="{confirmDisable: false}">
-        <button class="${btnSecondary}" data-show="!$confirmDisable" data-on-click="$confirmDisable = true">Disable Account</button>
-        <span data-show="$confirmDisable" class="flex items-center gap-2" style="display:none">
-          <span class="font-body text-bark-muted text-sm">Are you sure?</span>
-          <button class="px-3 py-1 rounded-md text-sm font-semibold bg-red-600 text-white cursor-pointer border-none hover:bg-red-700 transition-colors" data-on-click="@post('/volunteers/${v.id}/disable')">Confirm</button>
-          <button class="${btnSecondary}" data-on-click="$confirmDisable = false">Cancel</button>
-        </span>
-      </div>`;
 
 	return panelWrapper(`
     <div data-signals="{activeTab: 'details', historyLoaded: false}">
@@ -125,10 +117,16 @@ export function editPanel(v: Volunteer, currentVolunteerId: string): string {
 			isAdmin: v.isAdmin,
 			passwordRequired: false,
 			passwordHint: "Leave blank to keep current",
-			showAdminCheckbox: false,
 			cancelAction: "@get('/volunteers/close')",
+			disableAction:
+				!isSelf && !v.isDisabled
+					? `@post('/volunteers/${v.id}/disable')`
+					: undefined,
+			enableAction:
+				!isSelf && v.isDisabled
+					? `@post('/volunteers/${v.id}/enable')`
+					: undefined,
 		})}
-    ${disableToggle}
     </div>
     <div data-show="$activeTab==='history'" style="display:none">
       <div id="history-content" class="py-8 text-center text-bark-muted text-sm">Loading...</div>
@@ -153,7 +151,6 @@ export function createPanel(): string {
 			password: "",
 			isAdmin: false,
 			passwordRequired: true,
-			showAdminCheckbox: true,
 			cancelAction: "@get('/volunteers/close')",
 		})}
   `);
