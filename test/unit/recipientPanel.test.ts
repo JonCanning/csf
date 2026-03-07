@@ -72,9 +72,9 @@ describe("viewPanel", () => {
 describe("editPanel", () => {
 	test("renders form with data-bind inputs", () => {
 		const html = editPanel(alice);
-		expect(html).toContain("data-bind:name");
-		expect(html).toContain("data-bind:phone");
-		expect(html).toContain("data-bind:email");
+		expect(html).toContain("data-bind-name");
+		expect(html).toContain("data-bind-phone");
+		expect(html).toContain("data-bind-email");
 	});
 
 	test("pre-fills signal values", () => {
@@ -100,8 +100,8 @@ describe("editPanel", () => {
 describe("createPanel", () => {
 	test("renders form with data-bind inputs", () => {
 		const html = createPanel();
-		expect(html).toContain("data-bind:name");
-		expect(html).toContain("data-bind:phone");
+		expect(html).toContain("data-bind-name");
+		expect(html).toContain("data-bind-phone");
 	});
 
 	test("initializes signals with empty values", () => {

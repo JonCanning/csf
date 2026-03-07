@@ -48,13 +48,13 @@ export function recipientRow(r: Recipient): string {
 }
 
 export function recipientsPage(recipients: Recipient[]): string {
-	const tableOrEmpty =
+	const emptyRow = `<tr><td colspan="4" class="text-center py-12 text-bark-muted">No recipients yet</td></tr>`;
+	const rows =
 		recipients.length === 0
-			? `<div class="flex flex-col items-center justify-center py-16 text-bark-muted">
-				<p class="text-lg font-heading">No recipients yet</p>
-				<p class="text-sm mt-1">Add your first recipient to get started.</p>
-			</div>`
-			: `<div class="overflow-x-auto">
+			? emptyRow
+			: recipients.map(recipientRow).join("\n");
+
+	const tableOrEmpty = `<div class="overflow-x-auto">
 				<table class="w-full text-left border-collapse">
 					<thead>
 						<tr class="border-b-2 border-cream-300 bg-cream-100">
@@ -65,7 +65,7 @@ export function recipientsPage(recipients: Recipient[]): string {
 						</tr>
 					</thead>
 					<tbody id="recipient-rows">
-						${recipients.map(recipientRow).join("\n")}
+						${rows}
 					</tbody>
 				</table>
 			</div>`;
@@ -87,7 +87,7 @@ export function recipientsPage(recipients: Recipient[]): string {
 		<input
 			type="text"
 			placeholder="Search by name or phone&hellip;"
-			data-bind:search
+			data-bind-search
 			class="w-full max-w-sm px-3 py-2 rounded-lg border border-cream-300 bg-white text-bark placeholder-bark-muted focus:outline-none focus:ring-2 focus:ring-amber focus:border-transparent text-sm" />
 	</div>
 

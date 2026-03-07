@@ -52,7 +52,7 @@ describe("recipientsPage", () => {
 
 	test("includes search input with data-bind", () => {
 		const html = recipientsPage([alice]);
-		expect(html).toContain("data-bind:search");
+		expect(html).toContain("data-bind-search");
 	});
 
 	test("includes Add Recipient button", () => {

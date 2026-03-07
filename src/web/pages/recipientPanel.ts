@@ -90,25 +90,25 @@ function recipientForm(opts: {
       <form data-on-submit__prevent="${opts.method}('${opts.action}')">
         <div class="mb-4">
           <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Name</label>
-          <input class="${inputClass}" type="text" data-bind:name required />
+          <input class="${inputClass}" type="text" data-bind-name required />
         </div>
         <div class="mb-4">
           <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Phone</label>
-          <input class="${inputClass}" type="tel" data-bind:phone required />
+          <input class="${inputClass}" type="tel" data-bind-phone required />
         </div>
         <div class="mb-4">
           <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Email</label>
-          <input class="${inputClass}" type="email" data-bind:email />
+          <input class="${inputClass}" type="email" data-bind-email />
         </div>
         <div class="mb-4">
           <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-2">Payment Preference</label>
           <div class="flex gap-4">
             <label class="flex items-center gap-2 font-body text-bark cursor-pointer">
-              <input type="radio" name="paymentPreference" value="bank" ${bankChecked} data-bind:payment-preference />
+              <input type="radio" name="paymentPreference" value="bank" ${bankChecked} data-bind-payment-preference />
               Bank
             </label>
             <label class="flex items-center gap-2 font-body text-bark cursor-pointer">
-              <input type="radio" name="paymentPreference" value="cash" ${cashChecked} data-bind:payment-preference />
+              <input type="radio" name="paymentPreference" value="cash" ${cashChecked} data-bind-payment-preference />
               Cash
             </label>
           </div>
@@ -116,22 +116,22 @@ function recipientForm(opts: {
         <div data-show="$paymentPreference==='bank'">
           <div class="mb-4">
             <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Sort Code</label>
-            <input class="${inputClass}" type="text" data-bind:sort-code />
+            <input class="${inputClass}" type="text" data-bind-sort-code />
           </div>
           <div class="mb-4">
             <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Account Number</label>
-            <input class="${inputClass}" type="text" data-bind:account-number />
+            <input class="${inputClass}" type="text" data-bind-account-number />
           </div>
         </div>
         <div data-show="$paymentPreference==='cash'">
           <div class="mb-4">
             <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Meeting Place</label>
-            <input class="${inputClass}" type="text" data-bind:meeting-place />
+            <input class="${inputClass}" type="text" data-bind-meeting-place />
           </div>
         </div>
         <div class="mb-6">
           <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Notes</label>
-          <textarea class="${inputClass}" data-bind:notes rows="3"></textarea>
+          <textarea class="${inputClass}" data-bind-notes rows="3"></textarea>
         </div>
         <div class="flex gap-3">
           <button type="submit" class="${btnAmber}">${opts.submitLabel}</button>
