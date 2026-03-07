@@ -16,4 +16,82 @@
 
 	--font-heading: 'Fraunces', 'Georgia', serif;
 	--font-body: 'Source Serif 4', 'Georgia', serif;
+
+	--animate-slide-in: slide-in 0.2s ease-out;
+	--animate-fade-in: fade-in 0.4s ease-out;
+	--animate-shake: shake 0.4s ease-out;
+}
+
+@keyframes slide-in {
+	from { transform: translateX(100%); }
+	to { transform: translateX(0); }
+}
+
+@keyframes fade-in {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+	0%, 100% { transform: translateX(0); }
+	20%, 60% { transform: translateX(-6px); }
+	40%, 80% { transform: translateX(6px); }
+}
+
+@layer components {
+	.input {
+		@apply w-full px-3 py-2.5 border border-cream-300 rounded-md font-body text-bark bg-cream-50 transition-all focus:outline-none focus:border-amber focus:ring-2 focus:ring-amber/15;
+	}
+
+	.btn {
+		@apply px-4 py-2 rounded-md font-heading font-semibold text-sm cursor-pointer transition-colors;
+	}
+
+	.btn-primary {
+		@apply bg-amber text-cream-50 hover:bg-amber-dark active:bg-amber-dark/90 border-none;
+	}
+
+	.btn-secondary {
+		@apply border border-cream-200 text-bark hover:bg-cream-100 bg-transparent;
+	}
+
+	.btn-danger {
+		@apply bg-red-600 text-white hover:bg-red-700 border-none;
+	}
+
+	.label {
+		@apply block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1;
+	}
+
+	.badge {
+		@apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border;
+	}
+
+	.card {
+		@apply bg-white rounded-xl border border-cream-200 shadow-sm;
+	}
+
+	.panel {
+		@apply fixed top-0 right-0 h-full w-96 bg-cream-50 border-l border-cream-200 shadow-lg overflow-y-auto z-50 animate-slide-in;
+	}
+
+	.th {
+		@apply px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide;
+	}
+
+	.tab {
+		@apply px-3 py-1.5 text-sm font-heading font-semibold cursor-pointer transition-colors border-b-2 border-transparent text-bark-muted hover:text-bark;
+	}
+
+	.alert-error {
+		@apply bg-red-50 border border-red-200 text-red-800 px-3 py-2.5 rounded-md text-sm;
+	}
+
+	.nav-card {
+		@apply bg-cream-50 border border-cream-200 rounded-xl p-6 no-underline text-inherit shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md animate-fade-in;
+	}
+
+	.table-row {
+		@apply border-b border-cream-200 hover:bg-cream-50 cursor-pointer transition-colors;
+	}
 }

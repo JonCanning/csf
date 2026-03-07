@@ -27,31 +27,28 @@ function escapeHtml(s: string): string {
 		.replace(/"/g, "&quot;");
 }
 
-const inputClass =
-	"w-full px-3 py-2.5 border border-cream-300 rounded-md font-body text-bark bg-cream-50 focus:outline-none focus:border-amber focus:ring-2 focus:ring-amber/15";
-
 export function applyPage(): string {
 	return publicLayout(
 		"Apply",
 		`<div class="w-full max-w-md">
-	<div class="bg-white rounded-xl border border-cream-200 shadow-sm p-8">
+	<div class="card p-8">
 		<h1 class="font-heading text-2xl font-bold text-bark mb-6 text-center">Apply for Assistance</h1>
 		<form action="/apply" method="POST" class="space-y-4">
 			<div>
 				<label for="name" class="block text-sm font-body text-bark mb-1">Name</label>
-				<input type="text" id="name" name="name" required class="${inputClass}" />
+				<input type="text" id="name" name="name" required class="input" />
 			</div>
 			<div>
 				<label for="phone" class="block text-sm font-body text-bark mb-1">Phone</label>
-				<input type="tel" id="phone" name="phone" required class="${inputClass}" />
+				<input type="tel" id="phone" name="phone" required class="input" />
 			</div>
 			<div>
 				<label for="email" class="block text-sm font-body text-bark mb-1">Email (optional)</label>
-				<input type="email" id="email" name="email" class="${inputClass}" />
+				<input type="email" id="email" name="email" class="input" />
 			</div>
 			<div>
 				<label for="meetingPlace" class="block text-sm font-body text-bark mb-1">Meeting Place or Address</label>
-				<input type="text" id="meetingPlace" name="meetingPlace" required class="${inputClass}" />
+				<input type="text" id="meetingPlace" name="meetingPlace" required class="input" />
 			</div>
 			<fieldset>
 				<legend class="block text-sm font-body text-bark mb-2">Payment Preference</legend>
@@ -69,18 +66,18 @@ export function applyPage(): string {
 			<div id="bankFields" class="space-y-4" style="display:none;">
 				<div>
 					<label for="bankName" class="block text-sm font-body text-bark mb-1">Bank Name</label>
-					<input type="text" id="bankName" name="bankName" class="${inputClass}" />
+					<input type="text" id="bankName" name="bankName" class="input" />
 				</div>
 				<div>
 					<label for="sortCode" class="block text-sm font-body text-bark mb-1">Sort Code</label>
-					<input type="text" id="sortCode" name="sortCode" class="${inputClass}" />
+					<input type="text" id="sortCode" name="sortCode" class="input" />
 				</div>
 				<div>
 					<label for="accountNumber" class="block text-sm font-body text-bark mb-1">Account Number</label>
-					<input type="text" id="accountNumber" name="accountNumber" class="${inputClass}" />
+					<input type="text" id="accountNumber" name="accountNumber" class="input" />
 				</div>
 			</div>
-			<button type="submit" class="w-full bg-amber hover:bg-amber-dark text-cream-50 font-body font-semibold py-2.5 px-4 rounded-md transition-colors">
+			<button type="submit" class="btn btn-primary w-full font-body">
 				Submit Application
 			</button>
 		</form>
@@ -103,7 +100,7 @@ export function applyClosedPage(): string {
 	return publicLayout(
 		"Applications Closed",
 		`<div class="w-full max-w-md">
-	<div class="bg-white rounded-xl border border-cream-200 shadow-sm p-8 text-center">
+	<div class="card p-8 text-center">
 		<h1 class="font-heading text-2xl font-bold text-bark mb-4">Applications Closed</h1>
 		<p class="text-bark-muted font-body">The application window is currently closed. Please check back later.</p>
 	</div>
@@ -148,7 +145,7 @@ export function applyResultPage(status: string, reason?: string): string {
 	return publicLayout(
 		heading,
 		`<div class="w-full max-w-md">
-	<div class="bg-white rounded-xl border border-cream-200 shadow-sm p-8 text-center">
+	<div class="card p-8 text-center">
 		<h1 class="font-heading text-2xl font-bold text-bark mb-4">${escapeHtml(heading)}</h1>
 		<p class="text-bark-muted font-body">${escapeHtml(message)}</p>
 	</div>

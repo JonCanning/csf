@@ -9,25 +9,17 @@ function escapeHtml(s: string): string {
 }
 
 function panelWrapper(content: string): string {
-	return `<div id="panel" class="fixed top-0 right-0 h-full w-96 bg-cream-50 border-l border-cream-200 shadow-lg overflow-y-auto animate-[slideIn_0.2s_ease-out] z-50">
+	return `<div id="panel" class="panel">
   <div class="p-6">${content}</div>
-  <style>@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }</style>
 </div>`;
 }
 
 function field(label: string, value: string): string {
 	return `<div class="mb-4">
-    <dt class="text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">${label}</dt>
+    <dt class="label">${label}</dt>
     <dd class="font-body text-bark">${escapeHtml(value)}</dd>
   </div>`;
 }
-
-const btnSecondary =
-	"px-4 py-2 rounded-md font-heading font-semibold text-sm border border-cream-200 text-bark hover:bg-cream-100 cursor-pointer transition-colors bg-transparent";
-const btnAmber =
-	"px-4 py-2 bg-amber text-cream-50 rounded-md font-heading font-semibold text-sm cursor-pointer transition-colors hover:bg-amber-dark border-none";
-const btnDanger =
-	"px-4 py-2 rounded-md text-sm font-semibold bg-red-600 text-white cursor-pointer border-none hover:bg-red-700 transition-colors";
 
 function formatStatus(status: string): string {
 	return status
@@ -77,7 +69,7 @@ export function viewPanel(app: ApplicationRow): string {
 	return panelWrapper(`
     <div class="flex items-center justify-between mb-6">
       <h2 class="font-heading font-bold text-xl text-bark">${escapeHtml(app.name ?? "Application")}</h2>
-      <button class="${btnSecondary}" data-on-click="@get('/applications/close')">Close</button>
+      <button class="btn btn-secondary" data-on-click="@get('/applications/close')">Close</button>
     </div>
     <dl>
       ${detailFields(app)}
@@ -89,14 +81,14 @@ export function reviewPanel(app: ApplicationRow): string {
 	return panelWrapper(`
     <div class="flex items-center justify-between mb-6">
       <h2 class="font-heading font-bold text-xl text-bark">${escapeHtml(app.name ?? "Review Application")}</h2>
-      <button class="${btnSecondary}" data-on-click="@get('/applications/close')">Close</button>
+      <button class="btn btn-secondary" data-on-click="@get('/applications/close')">Close</button>
     </div>
     <dl>
       ${detailFields(app)}
     </dl>
     <div class="flex gap-3 mt-6">
-      <button class="${btnAmber}" data-on-click="@post('/applications/${encodeURIComponent(app.id)}/review?decision=confirm')">Confirm</button>
-      <button class="${btnDanger}" data-on-click="@post('/applications/${encodeURIComponent(app.id)}/review?decision=reject')">Reject</button>
+      <button class="btn btn-primary" data-on-click="@post('/applications/${encodeURIComponent(app.id)}/review?decision=confirm')">Confirm</button>
+      <button class="btn btn-danger" data-on-click="@post('/applications/${encodeURIComponent(app.id)}/review?decision=reject')">Reject</button>
     </div>
   `);
 }

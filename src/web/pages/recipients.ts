@@ -1,5 +1,5 @@
-import type { Recipient } from "../../domain/recipient/types";
-import { layout } from "./layout";
+import type { Recipient } from "../../domain/recipient/types.ts";
+import { layout } from "./layout.ts";
 
 function escapeHtml(s: string): string {
 	return s
@@ -27,9 +27,9 @@ function formatDate(iso: string): string {
 
 function paymentBadge(pref: "bank" | "cash"): string {
 	if (pref === "bank") {
-		return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200">Bank</span>`;
+		return `<span class="badge bg-blue-50 text-blue-700 border-blue-200">Bank</span>`;
 	}
-	return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200">Cash</span>`;
+	return `<span class="badge bg-green-50 text-green-700 border-green-200">Cash</span>`;
 }
 
 export function recipientRow(r: Recipient): string {
@@ -37,8 +37,8 @@ export function recipientRow(r: Recipient): string {
 	const phone = escapeJsString(r.phone);
 	const showExpr = `$search === '' || '${nameLower}'.includes($search.toLowerCase()) || '${phone}'.includes($search)`;
 	return `<tr
-		class="border-b border-cream-200 hover:bg-cream-50 cursor-pointer transition-colors"
-		data-on-click="@get('/recipients/${encodeURIComponent(r.id)}')"
+		class="table-row"
+		data-on-click="@get('/recipients/${encodeURIComponent(r.id)}/edit')"
 		data-show="${escapeHtml(showExpr)}">
 		<td class="px-4 py-3 font-medium text-bark">${escapeHtml(r.name)}</td>
 		<td class="px-4 py-3 text-bark-muted">${escapeHtml(r.phone)}</td>
@@ -58,10 +58,10 @@ export function recipientsPage(recipients: Recipient[]): string {
 				<table class="w-full text-left border-collapse">
 					<thead>
 						<tr class="border-b-2 border-cream-300 bg-cream-100">
-							<th class="px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide">Name</th>
-							<th class="px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide">Phone</th>
-							<th class="px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide">Payment</th>
-							<th class="px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide">Added</th>
+							<th class="th">Name</th>
+							<th class="th">Phone</th>
+							<th class="th">Payment</th>
+							<th class="th">Added</th>
 						</tr>
 					</thead>
 					<tbody id="recipient-rows">
@@ -77,7 +77,7 @@ export function recipientsPage(recipients: Recipient[]): string {
 			<h1 class="font-heading text-2xl font-semibold text-bark">Recipients</h1>
 		</div>
 		<button
-			class="px-4 py-2 rounded-lg bg-amber text-white font-medium hover:bg-amber-dark transition-colors text-sm"
+			class="btn btn-primary"
 			data-on-click="@get('/recipients/new')">
 			Add Recipient
 		</button>
@@ -88,10 +88,10 @@ export function recipientsPage(recipients: Recipient[]): string {
 			type="text"
 			placeholder="Search by name or phone&hellip;"
 			data-bind-search
-			class="w-full max-w-sm px-3 py-2 rounded-lg border border-cream-300 bg-white text-bark placeholder-bark-muted focus:outline-none focus:ring-2 focus:ring-amber focus:border-transparent text-sm" />
+			class="input max-w-sm bg-white text-sm placeholder-bark-muted" />
 	</div>
 
-	<div class="bg-white rounded-xl border border-cream-200 shadow-sm">
+	<div class="card">
 		${tableOrEmpty}
 	</div>
 

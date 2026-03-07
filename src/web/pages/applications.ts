@@ -1,5 +1,5 @@
-import type { ApplicationRow } from "../../domain/application/repository";
-import { layout } from "./layout";
+import type { ApplicationRow } from "../../domain/application/repository.ts";
+import { layout } from "./layout.ts";
 
 function escapeHtml(s: string): string {
 	return s
@@ -30,19 +30,19 @@ function statusBadge(status: string): string {
 	const label = status
 		.replace(/_/g, " ")
 		.replace(/\b\w/g, (c) => c.toUpperCase());
-	return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}">${escapeHtml(label)}</span>`;
+	return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
 }
 
 function paymentBadge(pref: string): string {
 	if (pref === "bank") {
-		return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200">Bank</span>`;
+		return `<span class="badge bg-blue-50 text-blue-700 border-blue-200">Bank</span>`;
 	}
-	return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200">Cash</span>`;
+	return `<span class="badge bg-green-50 text-green-700 border-green-200">Cash</span>`;
 }
 
 export function applicationRow(a: ApplicationRow): string {
 	return `<tr
-		class="border-b border-cream-200 hover:bg-cream-50 cursor-pointer transition-colors"
+		class="table-row"
 		data-on-click="@get('/applications/${encodeURIComponent(a.id)}')">
 		<td class="px-4 py-3 font-medium text-bark">${escapeHtml(a.name ?? "")}</td>
 		<td class="px-4 py-3 text-bark-muted">${escapeHtml(a.phone ?? "")}</td>
@@ -82,21 +82,21 @@ export function applicationsPage(
 		<select
 			data-bind-month
 			data-on-change="@get('/applications?month=' + $month)"
-			class="px-3 py-2 rounded-lg border border-cream-300 bg-white text-bark text-sm focus:outline-none focus:ring-2 focus:ring-amber focus:border-transparent">
+			class="input max-w-48 bg-white text-sm">
 			${monthOptions}
 		</select>
 	</div>
 
-	<div class="bg-white rounded-xl border border-cream-200 shadow-sm">
+	<div class="card">
 		<div class="overflow-x-auto">
 			<table class="w-full text-left border-collapse">
 				<thead>
 					<tr class="border-b-2 border-cream-300 bg-cream-100">
-						<th class="px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide">Name</th>
-						<th class="px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide">Phone</th>
-						<th class="px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide">Status</th>
-						<th class="px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide">Payment</th>
-						<th class="px-4 py-3 text-sm font-semibold text-bark-muted uppercase tracking-wide">Applied</th>
+						<th class="th">Name</th>
+						<th class="th">Phone</th>
+						<th class="th">Status</th>
+						<th class="th">Payment</th>
+						<th class="th">Applied</th>
 					</tr>
 				</thead>
 				${applicationsTableBody(applications)}
