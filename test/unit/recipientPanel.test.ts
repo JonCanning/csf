@@ -60,14 +60,28 @@ describe("viewPanel", () => {
 		const html = viewPanel(alice);
 		expect(html).toContain("Close");
 	});
+
+	test("uses signal-driven delete confirmation", () => {
+		const html = viewPanel(alice);
+		expect(html).toContain("confirmDelete");
+		expect(html).toContain("Are you sure?");
+		expect(html).toContain("Confirm");
+	});
 });
 
 describe("editPanel", () => {
-	test("renders form with pre-filled values", () => {
+	test("renders form with data-bind inputs", () => {
 		const html = editPanel(alice);
-		expect(html).toContain('value="Alice Smith"');
-		expect(html).toContain('value="07700900001"');
-		expect(html).toContain('value="alice@example.com"');
+		expect(html).toContain("data-bind:name");
+		expect(html).toContain("data-bind:phone");
+		expect(html).toContain("data-bind:email");
+	});
+
+	test("pre-fills signal values", () => {
+		const html = editPanel(alice);
+		expect(html).toContain("Alice Smith");
+		expect(html).toContain("07700900001");
+		expect(html).toContain("alice@example.com");
 	});
 
 	test("has Save and Cancel buttons", () => {
@@ -84,9 +98,16 @@ describe("editPanel", () => {
 });
 
 describe("createPanel", () => {
-	test("renders empty form", () => {
+	test("renders form with data-bind inputs", () => {
 		const html = createPanel();
-		expect(html).toContain('value=""');
+		expect(html).toContain("data-bind:name");
+		expect(html).toContain("data-bind:phone");
+	});
+
+	test("initializes signals with empty values", () => {
+		const html = createPanel();
+		expect(html).toContain("name: ''");
+		expect(html).toContain("phone: ''");
 	});
 
 	test("has Create and Cancel buttons", () => {

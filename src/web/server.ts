@@ -80,6 +80,13 @@ export function startServer(
 					return recipientRoutes.create();
 				},
 			},
+			"/recipients/close": {
+				GET: async (req) => {
+					const volunteer = await requireAuth(req);
+					if (!volunteer) return Response.redirect("/login", 302);
+					return recipientRoutes.closePanel();
+				},
+			},
 		},
 		async fetch(req) {
 			const url = new URL(req.url);
@@ -87,8 +94,7 @@ export function startServer(
 			if (!volunteer) return Response.redirect("/login", 302);
 
 			if (url.pathname === "/recipients" && req.method === "POST") {
-				const form = await req.formData();
-				return recipientRoutes.handleCreate(form, volunteer.id);
+				return recipientRoutes.handleCreate(req, volunteer.id);
 			}
 
 			const editMatch = url.pathname.match(/^\/recipients\/([^/]+)\/edit$/);
@@ -101,8 +107,7 @@ export function startServer(
 				const id = idMatch[1];
 				if (req.method === "GET") return recipientRoutes.detail(id);
 				if (req.method === "PUT") {
-					const form = await req.formData();
-					return recipientRoutes.handleUpdate(id, form, volunteer.id);
+					return recipientRoutes.handleUpdate(id, req, volunteer.id);
 				}
 				if (req.method === "DELETE") {
 					return recipientRoutes.handleDelete(id, volunteer.id);

@@ -9,6 +9,17 @@ import { createEventStore } from "../../src/infrastructure/eventStore";
 import { SQLiteRecipientRepository } from "../../src/infrastructure/recipient/sqliteRecipientRepository";
 import { createRecipientRoutes } from "../../src/web/routes/recipients";
 
+function signalsRequest(
+	signals: Record<string, unknown>,
+	method = "POST",
+): Request {
+	return new Request("http://localhost/recipients", {
+		method,
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(signals),
+	});
+}
+
 describe("recipient routes", () => {
 	let eventStore: SQLiteEventStore;
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
@@ -75,31 +86,49 @@ describe("recipient routes", () => {
 			const res = await routes.edit(id);
 			const body = await res.text();
 			expect(body).toContain("datastar-patch-elements");
-			expect(body).toContain('value="Alice"');
+			expect(body).toContain("Alice");
 		});
 	});
 
 	describe("create form", () => {
 		test("returns SSE with empty form", () => {
 			const res = routes.create();
-			// create() is sync, not async
 			expect(res.headers.get("Content-Type")).toBe("text/event-stream");
+		});
+	});
+
+	describe("closePanel", () => {
+		test("returns SSE with empty panel div", async () => {
+			const res = routes.closePanel();
+			const body = await res.text();
+			expect(body).toContain("datastar-patch-elements");
+			expect(body).toContain('<div id="panel"></div>');
 		});
 	});
 
 	describe("handleCreate", () => {
 		test("creates recipient and returns SSE", async () => {
-			const form = new FormData();
-			form.set("name", "Charlie");
-			form.set("phone", "07700900099");
-			form.set("paymentPreference", "cash");
+			const req = signalsRequest({
+				name: "Charlie",
+				phone: "07700900099",
+				paymentPreference: "cash",
+			});
 
-			const res = await routes.handleCreate(form, "volunteer-1");
+			const res = await routes.handleCreate(req, "volunteer-1");
 			expect(res.headers.get("Content-Type")).toBe("text/event-stream");
 
 			const created = await recipientRepo.getByPhone("07700900099");
 			expect(created).not.toBeNull();
-			expect(created!.name).toBe("Charlie");
+			expect(created?.name).toBe("Charlie");
+		});
+
+		test("returns 400 when name is missing", async () => {
+			const req = signalsRequest({
+				phone: "07700900099",
+				paymentPreference: "cash",
+			});
+			const res = await routes.handleCreate(req, "volunteer-1");
+			expect(res.status).toBe(400);
 		});
 	});
 
@@ -110,16 +139,20 @@ describe("recipient routes", () => {
 				eventStore,
 			);
 
-			const form = new FormData();
-			form.set("name", "Alicia");
-			form.set("phone", "07700900001");
-			form.set("paymentPreference", "cash");
+			const req = signalsRequest(
+				{
+					name: "Alicia",
+					phone: "07700900001",
+					paymentPreference: "cash",
+				},
+				"PUT",
+			);
 
-			const res = await routes.handleUpdate(id, form, "volunteer-1");
+			const res = await routes.handleUpdate(id, req, "volunteer-1");
 			expect(res.headers.get("Content-Type")).toBe("text/event-stream");
 
 			const updated = await recipientRepo.getById(id);
-			expect(updated!.name).toBe("Alicia");
+			expect(updated?.name).toBe("Alicia");
 		});
 	});
 

@@ -10,7 +10,11 @@ function escapeHtml(s: string): string {
 }
 
 function escapeJsString(s: string): string {
-	return s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+	return s
+		.replace(/\\/g, "\\\\")
+		.replace(/'/g, "\\'")
+		.replace(/`/g, "\\`")
+		.replace(/\$/g, "\\$");
 }
 
 function formatDate(iso: string): string {

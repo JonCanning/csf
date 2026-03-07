@@ -44,9 +44,9 @@ export function viewPanel(r: Recipient): string {
 	const notesField = r.notes ? field("Notes", r.notes) : "";
 
 	return panelWrapper(`
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-6" data-signals="{confirmDelete: false}">
       <h2 class="font-heading font-bold text-xl text-bark">${escapeHtml(r.name)}</h2>
-      <button class="${btnSecondary}" data-on-click="document.getElementById('panel').innerHTML=''">Close</button>
+      <button class="${btnSecondary}" data-on-click="@get('/recipients/close')">Close</button>
     </div>
     <dl>
       ${field("Phone", r.phone)}
@@ -56,15 +56,14 @@ export function viewPanel(r: Recipient): string {
       ${meetingField}
       ${notesField}
     </dl>
-    <div id="delete-area" class="flex gap-3 mt-6">
+    <div class="flex gap-3 mt-6">
       <button class="${btnAmber}" data-on-click="@get('/recipients/${r.id}/edit')">Edit</button>
-      <button class="${btnSecondary}" data-on-click="
-        document.getElementById('delete-area').innerHTML=\`
-          <span class='font-body text-bark-muted text-sm'>Are you sure?</span>
-          <button class='${btnAmber}' data-on-click='@delete("/recipients/${r.id}")'>Confirm</button>
-          <button class='${btnSecondary}' data-on-click='@get("/recipients/${r.id}")'>Cancel</button>
-        \`
-      ">Delete</button>
+      <button class="${btnSecondary}" data-show="!$confirmDelete" data-on-click="$confirmDelete = true">Delete</button>
+      <span data-show="$confirmDelete" class="flex items-center gap-2">
+        <span class="font-body text-bark-muted text-sm">Are you sure?</span>
+        <button class="px-3 py-1 rounded-md text-sm font-semibold bg-red-600 text-white cursor-pointer border-none hover:bg-red-700 transition-colors" data-on-click="@delete('/recipients/${r.id}')">Confirm</button>
+        <button class="${btnSecondary}" data-on-click="$confirmDelete = false">Cancel</button>
+      </span>
     </div>
   `);
 }
@@ -81,71 +80,77 @@ function recipientForm(opts: {
 	accountNumber: string;
 	meetingPlace: string;
 	notes: string;
-	cancelTarget: string;
+	cancelAction: string;
 }): string {
 	const bankChecked = opts.paymentPreference === "bank" ? "checked" : "";
 	const cashChecked = opts.paymentPreference === "cash" ? "checked" : "";
 
 	return `
-    <form data-on-submit__prevent="${opts.method}('${opts.action}')" data-store='{"formPref":"${opts.paymentPreference}"}'>
-      <div class="mb-4">
-        <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Name</label>
-        <input class="${inputClass}" type="text" name="name" value="${escapeHtml(opts.name)}" required />
-      </div>
-      <div class="mb-4">
-        <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Phone</label>
-        <input class="${inputClass}" type="tel" name="phone" value="${escapeHtml(opts.phone)}" required />
-      </div>
-      <div class="mb-4">
-        <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Email</label>
-        <input class="${inputClass}" type="email" name="email" value="${escapeHtml(opts.email)}" />
-      </div>
-      <div class="mb-4">
-        <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-2">Payment Preference</label>
-        <div class="flex gap-4">
-          <label class="flex items-center gap-2 font-body text-bark cursor-pointer">
-            <input type="radio" name="paymentPreference" value="bank" ${bankChecked} data-on-change="$formPref='bank'" />
-            Bank
-          </label>
-          <label class="flex items-center gap-2 font-body text-bark cursor-pointer">
-            <input type="radio" name="paymentPreference" value="cash" ${cashChecked} data-on-change="$formPref='cash'" />
-            Cash
-          </label>
-        </div>
-      </div>
-      <div data-show="$formPref==='bank'">
+    <div data-signals="{name: '${escapeSignalValue(opts.name)}', phone: '${escapeSignalValue(opts.phone)}', email: '${escapeSignalValue(opts.email)}', paymentPreference: '${opts.paymentPreference}', sortCode: '${escapeSignalValue(opts.sortCode)}', accountNumber: '${escapeSignalValue(opts.accountNumber)}', meetingPlace: '${escapeSignalValue(opts.meetingPlace)}', notes: '${escapeSignalValue(opts.notes)}'}">
+      <form data-on-submit__prevent="${opts.method}('${opts.action}')">
         <div class="mb-4">
-          <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Sort Code</label>
-          <input class="${inputClass}" type="text" name="sortCode" value="${escapeHtml(opts.sortCode)}" />
+          <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Name</label>
+          <input class="${inputClass}" type="text" data-bind:name required />
         </div>
         <div class="mb-4">
-          <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Account Number</label>
-          <input class="${inputClass}" type="text" name="accountNumber" value="${escapeHtml(opts.accountNumber)}" />
+          <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Phone</label>
+          <input class="${inputClass}" type="tel" data-bind:phone required />
         </div>
-      </div>
-      <div data-show="$formPref==='cash'">
         <div class="mb-4">
-          <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Meeting Place</label>
-          <input class="${inputClass}" type="text" name="meetingPlace" value="${escapeHtml(opts.meetingPlace)}" />
+          <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Email</label>
+          <input class="${inputClass}" type="email" data-bind:email />
         </div>
-      </div>
-      <div class="mb-6">
-        <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Notes</label>
-        <textarea class="${inputClass}" name="notes" rows="3">${escapeHtml(opts.notes)}</textarea>
-      </div>
-      <div class="flex gap-3">
-        <button type="submit" class="${btnAmber}">${opts.submitLabel}</button>
-        <button type="button" class="${btnSecondary}" data-on-click="${opts.cancelTarget}">Cancel</button>
-      </div>
-    </form>
+        <div class="mb-4">
+          <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-2">Payment Preference</label>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 font-body text-bark cursor-pointer">
+              <input type="radio" name="paymentPreference" value="bank" ${bankChecked} data-bind:payment-preference />
+              Bank
+            </label>
+            <label class="flex items-center gap-2 font-body text-bark cursor-pointer">
+              <input type="radio" name="paymentPreference" value="cash" ${cashChecked} data-bind:payment-preference />
+              Cash
+            </label>
+          </div>
+        </div>
+        <div data-show="$paymentPreference==='bank'">
+          <div class="mb-4">
+            <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Sort Code</label>
+            <input class="${inputClass}" type="text" data-bind:sort-code />
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Account Number</label>
+            <input class="${inputClass}" type="text" data-bind:account-number />
+          </div>
+        </div>
+        <div data-show="$paymentPreference==='cash'">
+          <div class="mb-4">
+            <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Meeting Place</label>
+            <input class="${inputClass}" type="text" data-bind:meeting-place />
+          </div>
+        </div>
+        <div class="mb-6">
+          <label class="block text-xs font-heading font-semibold text-bark-muted uppercase tracking-wide mb-1">Notes</label>
+          <textarea class="${inputClass}" data-bind:notes rows="3"></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button type="submit" class="${btnAmber}">${opts.submitLabel}</button>
+          <button type="button" class="${btnSecondary}" data-on-click="${opts.cancelAction}">Cancel</button>
+        </div>
+      </form>
+    </div>
   `;
+}
+
+function escapeSignalValue(s: string): string {
+	return s.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n");
 }
 
 export function editPanel(r: Recipient): string {
 	return panelWrapper(`
     <div class="flex items-center justify-between mb-6">
       <h2 class="font-heading font-bold text-xl text-bark">Edit Recipient</h2>
-      <button class="${btnSecondary}" data-on-click="document.getElementById('panel').innerHTML=''">Close</button>
+      <button class="${btnSecondary}" data-on-click="@get('/recipients/close')">Close</button>
     </div>
     ${recipientForm({
 			action: `/recipients/${r.id}`,
@@ -159,7 +164,7 @@ export function editPanel(r: Recipient): string {
 			accountNumber: r.bankDetails?.accountNumber ?? "",
 			meetingPlace: r.meetingPlace ?? "",
 			notes: r.notes ?? "",
-			cancelTarget: `@get('/recipients/${r.id}')`,
+			cancelAction: `@get('/recipients/${r.id}')`,
 		})}
   `);
 }
@@ -168,7 +173,7 @@ export function createPanel(): string {
 	return panelWrapper(`
     <div class="flex items-center justify-between mb-6">
       <h2 class="font-heading font-bold text-xl text-bark">New Recipient</h2>
-      <button class="${btnSecondary}" data-on-click="document.getElementById('panel').innerHTML=''">Close</button>
+      <button class="${btnSecondary}" data-on-click="@get('/recipients/close')">Close</button>
     </div>
     ${recipientForm({
 			action: "/recipients",
@@ -177,12 +182,12 @@ export function createPanel(): string {
 			name: "",
 			phone: "",
 			email: "",
-			paymentPreference: "bank",
+			paymentPreference: "cash",
 			sortCode: "",
 			accountNumber: "",
 			meetingPlace: "",
 			notes: "",
-			cancelTarget: "document.getElementById('panel').innerHTML=''",
+			cancelAction: "@get('/recipients/close')",
 		})}
   `);
 }

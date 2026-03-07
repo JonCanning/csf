@@ -8,7 +8,11 @@ import type { RecipientRepository } from "../../domain/recipient/repository.ts";
 import type { Recipient } from "../../domain/recipient/types.ts";
 import { createPanel, editPanel, viewPanel } from "../pages/recipientPanel.ts";
 import { recipientRow, recipientsPage } from "../pages/recipients.ts";
-import { patchElements, sseResponse } from "../sse.ts";
+import {
+	patchElements,
+	ServerSentEventGenerator,
+	sseResponse,
+} from "../sse.ts";
 
 export function createRecipientRoutes(
 	recipientRepo: RecipientRepository,
@@ -38,11 +42,17 @@ export function createRecipientRoutes(
 			return sseResponse(patchElements(createPanel()));
 		},
 
-		async handleCreate(form: FormData, volunteerId: string): Promise<Response> {
-			let data: ReturnType<typeof formToRecipientData>;
-			try {
-				data = formToRecipientData(form);
-			} catch {
+		closePanel(): Response {
+			return sseResponse(patchElements('<div id="panel"></div>'));
+		},
+
+		async handleCreate(req: Request, volunteerId: string): Promise<Response> {
+			const result = await ServerSentEventGenerator.readSignals(req);
+			if (!result.success) {
+				return new Response(result.error, { status: 400 });
+			}
+			const data = signalsToRecipientData(result.signals);
+			if (!data) {
 				return new Response("Name and phone are required", { status: 400 });
 			}
 			const { id } = await createRecipient(
@@ -60,13 +70,15 @@ export function createRecipientRoutes(
 
 		async handleUpdate(
 			id: string,
-			form: FormData,
+			req: Request,
 			volunteerId: string,
 		): Promise<Response> {
-			let data: ReturnType<typeof formToRecipientData>;
-			try {
-				data = formToRecipientData(form);
-			} catch {
+			const result = await ServerSentEventGenerator.readSignals(req);
+			if (!result.success) {
+				return new Response(result.error, { status: 400 });
+			}
+			const data = signalsToRecipientData(result.signals);
+			if (!data) {
 				return new Response("Name and phone are required", { status: 400 });
 			}
 			await updateRecipient(id, volunteerId, data, eventStore);
@@ -90,32 +102,34 @@ export function createRecipientRoutes(
 	};
 }
 
-function getString(form: FormData, key: string): string | undefined {
-	const val = form.get(key);
-	return typeof val === "string" && val.length > 0 ? val : undefined;
-}
+function signalsToRecipientData(signals: Record<string, unknown>): {
+	name: string;
+	phone: string;
+	email?: string;
+	paymentPreference: "bank" | "cash";
+	meetingPlace?: string;
+	bankDetails?: { sortCode: string; accountNumber: string };
+	notes?: string;
+} | null {
+	const name = String(signals.name ?? "").trim();
+	const phone = String(signals.phone ?? "").trim();
+	if (!name || !phone) return null;
 
-function formToRecipientData(form: FormData) {
-	const name = getString(form, "name");
-	const phone = getString(form, "phone");
-	if (!name || !phone) {
-		throw new Error("Name and phone are required");
-	}
-	const rawPref = getString(form, "paymentPreference");
-	const pref = rawPref === "bank" ? "bank" : "cash";
-	const sortCode = getString(form, "sortCode");
-	const accountNumber = getString(form, "accountNumber");
+	const pref = signals.paymentPreference === "bank" ? "bank" : "cash";
+	const sortCode = String(signals.sortCode ?? "").trim();
+	const accountNumber = String(signals.accountNumber ?? "").trim();
+
 	return {
 		name,
 		phone,
-		email: getString(form, "email"),
+		email: String(signals.email ?? "").trim() || undefined,
 		paymentPreference: pref,
-		meetingPlace: getString(form, "meetingPlace"),
+		meetingPlace: String(signals.meetingPlace ?? "").trim() || undefined,
 		bankDetails:
 			pref === "bank" && sortCode && accountNumber
 				? { sortCode, accountNumber }
 				: undefined,
-		notes: getString(form, "notes"),
+		notes: String(signals.notes ?? "").trim() || undefined,
 	};
 }
 
