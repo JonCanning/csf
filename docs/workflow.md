@@ -12,42 +12,52 @@ We're moving from manually awarding £40 grants to a **lottery-based system**: a
 
 ```mermaid
 flowchart TD
+    %% APPLICATION PHASE
     subgraph "📥 APPLICATION PHASE · volunteer opens/closes the window"
         SMS([📱 Person texts or<br/>emails to apply]) --> LINK[Auto-reply with<br/>unique form link]
         WEB([🌐 Person visits<br/>website form]) --> FORM
         LINK --> FORM["Complete Online Form<br/>(name, phone number (required),<br/>email (optional),<br/>meeting place or address,<br/>payment preference: bank or cash)"]
 
-        FORM --> ID{Identity<br/>Resolution}
+        FORM --> WINDOW{Window<br/>open?}
+        WINDOW -->|No| REJ_CLOSED[❌ Rejected<br/>Window closed — notify]
+        WINDOW -->|Yes| ID{"Identity<br/>Resolution"}
+
         ID -->|Phone + name match| EXISTING[Link to existing<br/>applicant profile]
         ID -->|Known phone,<br/>different name| FLAG["📧 Auto-notify:<br/>'A volunteer will<br/>contact you shortly'"]
         ID -->|No match| NEW[Create new<br/>applicant profile]
 
         EXISTING --> ELIG
-        FLAG -->|Volunteer reviews<br/>& confirms identity| ELIG
         NEW --> ELIG
+
+        FLAG --> REVIEW{Volunteer<br/>reviews}
+        REVIEW -->|Confirms identity| ELIG
+        REVIEW -->|Rejects| REJ_ID[❌ Rejected<br/>Identity mismatch — notify]
 
         ELIG{Eligibility<br/>Check}
         ELIG -->|Last grant < 3 months| REJ_COOL[❌ Rejected<br/>Too soon — notify]
         ELIG -->|Already applied<br/>this month| REJ_DUP[❌ Rejected<br/>Duplicate — notify]
-        ELIG -->|Window not open| REJ_CLOSED[❌ Rejected<br/>Window closed — notify]
         ELIG -->|✅ Eligible| POOL[✅ Added to<br/>Lottery Pool]
     end
 
-    subgraph "🎲 LOTTERY PHASE · Month End"
-        OPEN([Volunteer opens<br/>application window])
-        OPEN -.->|Window open| POOL
-        CLOSE([Volunteer closes<br/>application window])
-        CLOSE --> BALANCE[Volunteer enters<br/>fund balance]
+    %% LOTTERY PHASE
+    subgraph "🎲 LOTTERY PHASE · Volunteer-driven lifecycle"
+        POOL --> OPEN([Volunteer opens<br/>application window])
+        OPEN --> ACCEPT["Applications<br/>accepted"]
+        ACCEPT --> CLOSE([Volunteer closes<br/>application window])
+        CLOSE --> BALANCE["Volunteer enters<br/>balance, reserve & grant amount"]
         BALANCE --> CALC["Calculate slots:<br/>floor((balance − reserve) ÷ £40)"]
         CALC --> DRAW[🎲 Draw lottery<br/>with auditable RNG seed]
 
-        DRAW --> WINNERS[🏆 Selected winners<br/>in ranked order]
-        DRAW --> LOSERS[Not selected]
+        DRAW --> FANOUT["Process manager fans out<br/>SelectApplication / RejectFromLottery"]
+        FANOUT --> WINNERS[🏆 Selected winners<br/>in ranked order]
+        FANOUT --> LOSERS[Not selected]
 
-        WINNERS --> WIN_NOTIFY[📧 Notify winners<br/>via email/SMS]
+        WINNERS --> ASSIGN["Volunteer assigned<br/>to grant"]
+        ASSIGN --> WIN_NOTIFY[📧 Notify winners<br/>via email/SMS]
         LOSERS --> LOSE_NOTIFY[📧 Notify non-winners<br/>via email/SMS]
     end
 
+    %% PAYMENT PHASE
     subgraph "💳 PAYMENT PHASE"
         WIN_NOTIFY -->|Chose bank transfer| BANK_FORM["📧 Auto-send secure form:<br/>• Upload proof of address<br/>• Enter bank details<br/>(sort code + account no.)"]
         WIN_NOTIFY -->|Chose cash| CASH_MEET["Volunteer contacts<br/>recipient to arrange<br/>cash handover"]
@@ -62,38 +72,39 @@ flowchart TD
         OFFER_CASH -->|Declines| RELEASE[Slot released<br/>to waitlist]
 
         CASH_MEET --> CASH_DONE([Cash handed<br/>over in person])
-        CASH_DONE --> CASH_RECORD[✅ Grant recorded<br/>3-month cooldown starts]
-        CASH_RECORD --> REIMBURSE["Volunteer submits<br/>OC expense reference"]
-        REIMBURSE --> REIMBURSED[✅ Volunteer<br/>reimbursed]
+        CASH_DONE --> CASH_PAID["✅ GrantPaid (cash)<br/>awaiting_reimbursement"]
+        CASH_PAID --> REIMBURSE["Volunteer submits<br/>OC expense reference"]
+        REIMBURSE --> REIMBURSED["✅ VolunteerReimbursed<br/>Grant complete"]
 
         CLEARED --> PAY["💸 Pay £40<br/>(bank transfer)"]
-
-        PAY --> BANK_RECORD[✅ Grant recorded<br/>3-month cooldown starts]
+        PAY --> BANK_PAID["✅ GrantPaid (bank)<br/>Grant complete"]
     end
 
+    %% NO-RESPONSE HANDLING
     subgraph "⏳ NO-RESPONSE HANDLING"
         WIN_NOTIFY -->|No response<br/>7 days| REMIND["Send reminder<br/>+ try calling if<br/>phone number on file"]
         REMIND -->|No response<br/>14 days| HOLD[Slot held until<br/>month end]
         HOLD -->|Month end| RELEASE
     end
 
+    %% WAITLIST
     subgraph "📋 WAITLIST"
         RELEASE --> WAIT{Next person<br/>on waitlist?}
         WAIT -->|Yes| WIN_NOTIFY
         WAIT -->|No| ROLLOVER[Funds roll over<br/>to next month]
     end
 
-    POOL -.->|End of month| CLOSE
-
+    %% STYLE DEFINITIONS
     style SMS fill:#4CAF50,color:#fff
     style WEB fill:#4CAF50,color:#fff
     style REJ_COOL fill:#f44336,color:#fff
     style REJ_DUP fill:#f44336,color:#fff
     style REJ_CLOSED fill:#f44336,color:#fff
+    style REJ_ID fill:#f44336,color:#fff
     style POOL fill:#2196F3,color:#fff
     style DRAW fill:#9C27B0,color:#fff
-    style CASH_RECORD fill:#4CAF50,color:#fff
-    style BANK_RECORD fill:#4CAF50,color:#fff
+    style CASH_PAID fill:#4CAF50,color:#fff
+    style BANK_PAID fill:#4CAF50,color:#fff
     style REIMBURSED fill:#4CAF50,color:#fff
     style PAY fill:#FF9800,color:#fff
 ```
@@ -120,7 +131,7 @@ flowchart TD
 
 ### Automated (implemented)
 - Identity resolution (phone + name matching)
-- Eligibility checks (cooldown, duplicates)
+- Eligibility checks (window status, cooldown, duplicates)
 - Recipient profile creation on first application
 - Lottery draw (seeded RNG, deterministic, auditable)
 - Selection fan-out (process manager dispatches to application streams)
@@ -154,6 +165,17 @@ flowchart TD
 ## Domain Events
 
 ### Application Aggregate (implemented)
+
+#### Commands
+
+| Command | Who | Allowed States | What Happens |
+|---------|-----|----------------|--------------|
+| `SubmitApplication` | System (form handler) | initial | Resolves identity, checks eligibility; emits Submitted + (Accepted / Rejected / Flagged) |
+| `ReviewApplication` | Volunteer | flagged | Confirms or rejects flagged identity; re-checks eligibility if confirmed |
+| `SelectApplication` | System (process manager) | accepted, confirmed | Marks applicant as lottery winner with rank |
+| `RejectFromLottery` | System (process manager) | accepted, confirmed | Marks applicant as not selected this month |
+
+#### Events
 
 | Event | Trigger | What Happens |
 |-------|---------|--------------|
@@ -237,6 +259,37 @@ flowchart TD
 | `VolunteerReimbursed` | Volunteer records OC expense | Cash grant fully complete |
 | `SlotReleased` | Volunteer releases / cash declined | Release slot to waitlist |
 
+#### State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> awaiting_bank_details : GrantCreated (bank)
+    [*] --> awaiting_cash_handover : GrantCreated (cash)
+
+    awaiting_bank_details --> bank_details_submitted : BankDetailsSubmitted
+    bank_details_submitted --> poa_approved : ProofOfAddressApproved
+    bank_details_submitted --> awaiting_bank_details : ProofOfAddressRejected (< 3)
+    bank_details_submitted --> offered_cash_alternative : ProofOfAddressRejected (3rd)
+
+    poa_approved --> paid : GrantPaid (bank)
+
+    offered_cash_alternative --> awaiting_cash_handover : CashAlternativeAccepted
+    offered_cash_alternative --> released : CashAlternativeDeclined
+
+    awaiting_cash_handover --> awaiting_reimbursement : GrantPaid (cash)
+    awaiting_reimbursement --> reimbursed : VolunteerReimbursed
+
+    awaiting_bank_details --> released : SlotReleased
+    bank_details_submitted --> released : SlotReleased
+    poa_approved --> released : SlotReleased
+    offered_cash_alternative --> released : SlotReleased
+    awaiting_cash_handover --> released : SlotReleased
+
+    note right of paid : Terminal (bank)
+    note right of reimbursed : Terminal (cash)
+    note right of released : Terminal
+```
+
 ### Not Yet Implemented
 
 | Event | Trigger | What Happens |
@@ -259,4 +312,4 @@ flowchart TD
 
 ---
 
-*Once approved, we'll implement this as a TypeScript + Node.js event-driven system.*
+*Implemented as a TypeScript + Bun event-driven system using Emmett for event sourcing.*
