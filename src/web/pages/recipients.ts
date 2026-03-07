@@ -1,6 +1,18 @@
 import type { Recipient } from "../../domain/recipient/types";
 import { layout } from "./layout";
 
+function escapeHtml(s: string): string {
+	return s
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;");
+}
+
+function escapeJsString(s: string): string {
+	return s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
 function formatDate(iso: string): string {
 	return new Date(iso).toLocaleDateString("en-GB", {
 		day: "numeric",
@@ -17,14 +29,15 @@ function paymentBadge(pref: "bank" | "cash"): string {
 }
 
 export function recipientRow(r: Recipient): string {
-	const nameLower = r.name.toLowerCase();
-	const showExpr = `$search === '' || '${nameLower}'.includes($search.toLowerCase()) || '${r.phone}'.includes($search)`;
+	const nameLower = escapeJsString(r.name.toLowerCase());
+	const phone = escapeJsString(r.phone);
+	const showExpr = `$search === '' || '${nameLower}'.includes($search.toLowerCase()) || '${phone}'.includes($search)`;
 	return `<tr
 		class="border-b border-cream-200 hover:bg-cream-50 cursor-pointer transition-colors"
-		data-on-click="@get('/recipients/${r.id}')"
-		data-show="${showExpr.replace(/"/g, "&quot;")}">
-		<td class="px-4 py-3 font-medium text-bark">${r.name}</td>
-		<td class="px-4 py-3 text-bark-muted">${r.phone}</td>
+		data-on-click="@get('/recipients/${encodeURIComponent(r.id)}')"
+		data-show="${escapeHtml(showExpr)}">
+		<td class="px-4 py-3 font-medium text-bark">${escapeHtml(r.name)}</td>
+		<td class="px-4 py-3 text-bark-muted">${escapeHtml(r.phone)}</td>
 		<td class="px-4 py-3">${paymentBadge(r.paymentPreference)}</td>
 		<td class="px-4 py-3 text-bark-muted text-sm">${formatDate(r.createdAt)}</td>
 	</tr>`;

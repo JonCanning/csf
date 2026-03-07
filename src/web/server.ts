@@ -92,7 +92,7 @@ export function startServer(
 			}
 
 			const editMatch = url.pathname.match(/^\/recipients\/([^/]+)\/edit$/);
-			if (editMatch?.[1]) {
+			if (editMatch?.[1] && req.method === "GET") {
 				return recipientRoutes.edit(editMatch[1]);
 			}
 

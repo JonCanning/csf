@@ -39,7 +39,12 @@ export function createRecipientRoutes(
 		},
 
 		async handleCreate(form: FormData, volunteerId: string): Promise<Response> {
-			const data = formToRecipientData(form);
+			let data: ReturnType<typeof formToRecipientData>;
+			try {
+				data = formToRecipientData(form);
+			} catch {
+				return new Response("Name and phone are required", { status: 400 });
+			}
 			const { id } = await createRecipient(
 				{ ...data, volunteerId },
 				eventStore,
@@ -58,7 +63,12 @@ export function createRecipientRoutes(
 			form: FormData,
 			volunteerId: string,
 		): Promise<Response> {
-			const data = formToRecipientData(form);
+			let data: ReturnType<typeof formToRecipientData>;
+			try {
+				data = formToRecipientData(form);
+			} catch {
+				return new Response("Name and phone are required", { status: 400 });
+			}
 			await updateRecipient(id, volunteerId, data, eventStore);
 			const recipient = await recipientRepo.getById(id);
 			if (!recipient) return new Response("Not found", { status: 404 });
@@ -80,21 +90,32 @@ export function createRecipientRoutes(
 	};
 }
 
+function getString(form: FormData, key: string): string | undefined {
+	const val = form.get(key);
+	return typeof val === "string" && val.length > 0 ? val : undefined;
+}
+
 function formToRecipientData(form: FormData) {
-	const pref = (form.get("paymentPreference") as string) || "cash";
-	const sortCode = form.get("sortCode") as string | null;
-	const accountNumber = form.get("accountNumber") as string | null;
+	const name = getString(form, "name");
+	const phone = getString(form, "phone");
+	if (!name || !phone) {
+		throw new Error("Name and phone are required");
+	}
+	const rawPref = getString(form, "paymentPreference");
+	const pref = rawPref === "bank" ? "bank" : "cash";
+	const sortCode = getString(form, "sortCode");
+	const accountNumber = getString(form, "accountNumber");
 	return {
-		name: form.get("name") as string,
-		phone: form.get("phone") as string,
-		email: (form.get("email") as string) || undefined,
-		paymentPreference: pref as "bank" | "cash",
-		meetingPlace: (form.get("meetingPlace") as string) || undefined,
+		name,
+		phone,
+		email: getString(form, "email"),
+		paymentPreference: pref,
+		meetingPlace: getString(form, "meetingPlace"),
 		bankDetails:
 			pref === "bank" && sortCode && accountNumber
 				? { sortCode, accountNumber }
 				: undefined,
-		notes: (form.get("notes") as string) || undefined,
+		notes: getString(form, "notes"),
 	};
 }
 
