@@ -12,7 +12,7 @@ We're moving from manually awarding £40 grants to a **lottery-based system**: a
 
 ```mermaid
 flowchart TD
-    subgraph "📥 APPLICATION PHASE · open for a limited window (dates TBD)"
+    subgraph "📥 APPLICATION PHASE · volunteer opens/closes the window"
         SMS([📱 Person texts or<br/>emails to apply]) --> LINK[Auto-reply with<br/>unique form link]
         WEB([🌐 Person visits<br/>website form]) --> FORM
         LINK --> FORM["Complete Online Form<br/>(name, phone number (required),<br/>email (optional),<br/>meeting place or address,<br/>payment preference: bank or cash)"]
@@ -29,10 +29,13 @@ flowchart TD
         ELIG{Eligibility<br/>Check}
         ELIG -->|Last grant < 3 months| REJ_COOL[❌ Rejected<br/>Too soon — notify]
         ELIG -->|Already applied<br/>this month| REJ_DUP[❌ Rejected<br/>Duplicate — notify]
+        ELIG -->|Window not open| REJ_CLOSED[❌ Rejected<br/>Window closed — notify]
         ELIG -->|✅ Eligible| POOL[✅ Added to<br/>Lottery Pool]
     end
 
     subgraph "🎲 LOTTERY PHASE · Month End"
+        OPEN([Volunteer opens<br/>application window])
+        OPEN -.->|Window open| POOL
         CLOSE([Volunteer closes<br/>application window])
         CLOSE --> BALANCE[Volunteer enters<br/>fund balance]
         BALANCE --> CALC["Calculate slots:<br/>floor((balance − reserve) ÷ £40)"]
@@ -86,6 +89,7 @@ flowchart TD
     style WEB fill:#4CAF50,color:#fff
     style REJ_COOL fill:#f44336,color:#fff
     style REJ_DUP fill:#f44336,color:#fff
+    style REJ_CLOSED fill:#f44336,color:#fff
     style POOL fill:#2196F3,color:#fff
     style DRAW fill:#9C27B0,color:#fff
     style CASH_RECORD fill:#4CAF50,color:#fff
@@ -102,7 +106,7 @@ flowchart TD
 |------|--------|
 | **Grant amount** | £40 fixed |
 | **Cooldown** | 3 months from selection month (selected Jan → reapply Apr) |
-| **Application window** | Limited window each month (dates TBD — not open all month) |
+| **Application window** | Volunteer explicitly opens and closes each month's window; applications outside the window are rejected with reason `window_closed` |
 | **Phone number** | Mandatory — helps with eligibility checking and contacting winners |
 | **Slots available** | Volunteer enters fund balance; `floor((balance − reserve) ÷ £40)`, reserve set by admin |
 | **Unresponsive winners** | Reminder + phone call attempt at 7 days, slot held until month end then released to waitlist |
@@ -133,6 +137,7 @@ flowchart TD
 
 ### Volunteer Actions (implemented)
 - Resolve identity mismatches (review flagged applications)
+- Open application window (manual, starts acceptance for the month)
 - Close application window (manual, ends acceptance for the month)
 - Trigger lottery draw (manual, after entering OC balance)
 - Verify proof of address uploads (approve/reject)
@@ -156,7 +161,7 @@ flowchart TD
 | `ApplicationFlaggedForReview` | Known phone, different name | Auto-notify applicant; add to volunteer queue |
 | `ApplicationConfirmed` | Volunteer confirms flagged applicant | Re-check eligibility → Accept or reject |
 | `ApplicationAccepted` | Eligibility passed | Add to lottery pool |
-| `ApplicationRejected` | Cooldown/duplicate/identity_mismatch | Notify applicant with reason |
+| `ApplicationRejected` | Cooldown/duplicate/identity_mismatch/window_closed | Notify applicant with reason |
 
 ### Recipient Aggregate (implemented)
 
@@ -180,13 +185,15 @@ flowchart TD
 
 | Command | Who | Allowed States | What Happens |
 |---------|-----|----------------|--------------|
-| `CloseApplicationWindow` | Volunteer | initial | Closes the application window for this month's cycle |
+| `OpenApplicationWindow` | Volunteer | initial | Opens the application window for this month's cycle; applications can now be submitted |
+| `CloseApplicationWindow` | Volunteer | open | Closes the application window; no more applications accepted |
 | `DrawLottery` | Volunteer | windowClosed | Volunteer provides fund balance, reserve, and grant amount; seeded RNG selects winners |
 
 #### Events
 
 | Event | Trigger | What Happens |
 |-------|---------|--------------|
+| `ApplicationWindowOpened` | Volunteer opens window | Start accepting applications for this month |
 | `ApplicationWindowClosed` | Volunteer closes window | Stop accepting new applications for this month |
 | `LotteryDrawn` | Volunteer triggers draw | Seeded RNG selects winners; process manager fans out selection commands |
 
