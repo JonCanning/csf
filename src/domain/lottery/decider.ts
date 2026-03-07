@@ -6,6 +6,7 @@ import type {
 	LotteryCommand,
 	LotteryEvent,
 	LotteryState,
+	OpenApplicationWindow,
 } from "./types.ts";
 
 export const initialState = (): LotteryState => ({ status: "initial" });
@@ -15,6 +16,8 @@ export function decide(
 	state: LotteryState,
 ): LotteryEvent[] {
 	switch (command.type) {
+		case "OpenApplicationWindow":
+			return decideOpen(command, state);
 		case "CloseApplicationWindow":
 			return decideClose(command, state);
 		case "DrawLottery":
@@ -22,11 +25,29 @@ export function decide(
 	}
 }
 
+function decideOpen(
+	command: OpenApplicationWindow,
+	state: LotteryState,
+): LotteryEvent[] {
+	if (state.status !== "initial") {
+		throw new IllegalStateError(`Cannot open window in ${state.status} state`);
+	}
+	return [
+		{
+			type: "ApplicationWindowOpened",
+			data: {
+				monthCycle: command.data.monthCycle,
+				openedAt: command.data.openedAt,
+			},
+		},
+	];
+}
+
 function decideClose(
 	command: CloseApplicationWindow,
 	state: LotteryState,
 ): LotteryEvent[] {
-	if (state.status !== "initial") {
+	if (state.status !== "open") {
 		throw new IllegalStateError(`Cannot close window in ${state.status} state`);
 	}
 	return [
@@ -80,6 +101,11 @@ function decideDraw(command: DrawLottery, state: LotteryState): LotteryEvent[] {
 
 export function evolve(state: LotteryState, event: LotteryEvent): LotteryState {
 	switch (event.type) {
+		case "ApplicationWindowOpened":
+			return {
+				status: "open",
+				monthCycle: event.data.monthCycle,
+			};
 		case "ApplicationWindowClosed":
 			return {
 				status: "windowClosed",

@@ -13,6 +13,14 @@ export type LotterySelection = LotteryApplicant & {
 
 // Commands
 
+export type OpenApplicationWindow = Command<
+	"OpenApplicationWindow",
+	{
+		monthCycle: string;
+		openedAt: string;
+	}
+>;
+
 export type CloseApplicationWindow = Command<
 	"CloseApplicationWindow",
 	{
@@ -35,9 +43,20 @@ export type DrawLottery = Command<
 	}
 >;
 
-export type LotteryCommand = CloseApplicationWindow | DrawLottery;
+export type LotteryCommand =
+	| OpenApplicationWindow
+	| CloseApplicationWindow
+	| DrawLottery;
 
 // Events
+
+export type ApplicationWindowOpened = Event<
+	"ApplicationWindowOpened",
+	{
+		monthCycle: string;
+		openedAt: string;
+	}
+>;
 
 export type ApplicationWindowClosed = Event<
 	"ApplicationWindowClosed",
@@ -63,7 +82,10 @@ export type LotteryDrawn = Event<
 	}
 >;
 
-export type LotteryEvent = ApplicationWindowClosed | LotteryDrawn;
+export type LotteryEvent =
+	| ApplicationWindowOpened
+	| ApplicationWindowClosed
+	| LotteryDrawn;
 
 export type LotteryEventType = LotteryEvent["type"];
 
@@ -71,6 +93,7 @@ export type LotteryEventType = LotteryEvent["type"];
 
 export type LotteryState =
 	| { status: "initial" }
+	| { status: "open"; monthCycle: string }
 	| { status: "windowClosed"; monthCycle: string }
 	| {
 			status: "drawn";

@@ -10,6 +10,7 @@ import type {
 	DrawLottery,
 	LotteryApplicant,
 	LotteryState,
+	OpenApplicationWindow,
 } from "../../src/domain/lottery/types.ts";
 
 function makePool(n: number): LotteryApplicant[] {
@@ -17,6 +18,13 @@ function makePool(n: number): LotteryApplicant[] {
 		applicationId: `app-${i + 1}`,
 		applicantId: `applicant-${i + 1}`,
 	}));
+}
+
+function openCommand(monthCycle = "2026-03"): OpenApplicationWindow {
+	return {
+		type: "OpenApplicationWindow",
+		data: { monthCycle, openedAt: "2026-03-01T00:00:00Z" },
+	};
 }
 
 function closeCommand(monthCycle = "2026-03"): CloseApplicationWindow {
@@ -46,16 +54,47 @@ function drawCommand(
 }
 
 describe("lottery decider", () => {
+	describe("OpenApplicationWindow", () => {
+		test("initial → ApplicationWindowOpened", () => {
+			const events = decide(openCommand(), initialState());
+			expect(events).toHaveLength(1);
+			expect(events[0]!.type).toBe("ApplicationWindowOpened");
+			expect(events[0]!.data.monthCycle).toBe("2026-03");
+		});
+
+		test("cannot open already-open window", () => {
+			const state = evolve(initialState(), {
+				type: "ApplicationWindowOpened",
+				data: { monthCycle: "2026-03", openedAt: "2026-03-01T00:00:00Z" },
+			});
+			expect(() => decide(openCommand(), state)).toThrow(IllegalStateError);
+		});
+	});
+
 	describe("CloseApplicationWindow", () => {
-		test("initial → ApplicationWindowClosed", () => {
-			const events = decide(closeCommand(), initialState());
+		test("open → ApplicationWindowClosed", () => {
+			const state = evolve(initialState(), {
+				type: "ApplicationWindowOpened",
+				data: { monthCycle: "2026-03", openedAt: "2026-03-01T00:00:00Z" },
+			});
+			const events = decide(closeCommand(), state);
 			expect(events).toHaveLength(1);
 			expect(events[0]!.type).toBe("ApplicationWindowClosed");
 			expect(events[0]!.data.monthCycle).toBe("2026-03");
 		});
 
+		test("cannot close from initial state", () => {
+			expect(() => decide(closeCommand(), initialState())).toThrow(
+				IllegalStateError,
+			);
+		});
+
 		test("cannot close already-closed window", () => {
-			const state = evolve(initialState(), {
+			let state = evolve(initialState(), {
+				type: "ApplicationWindowOpened",
+				data: { monthCycle: "2026-03", openedAt: "2026-03-01T00:00:00Z" },
+			});
+			state = evolve(state, {
 				type: "ApplicationWindowClosed",
 				data: { monthCycle: "2026-03", closedAt: "2026-03-31T23:59:59Z" },
 			});
@@ -172,6 +211,17 @@ describe("lottery decider", () => {
 	});
 
 	describe("evolve", () => {
+		test("ApplicationWindowOpened → open", () => {
+			const state = evolve(initialState(), {
+				type: "ApplicationWindowOpened",
+				data: { monthCycle: "2026-03", openedAt: "2026-03-01T00:00:00Z" },
+			});
+			expect(state).toEqual({
+				status: "open",
+				monthCycle: "2026-03",
+			});
+		});
+
 		test("ApplicationWindowClosed → windowClosed", () => {
 			const state = evolve(initialState(), {
 				type: "ApplicationWindowClosed",
