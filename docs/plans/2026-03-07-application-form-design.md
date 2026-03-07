@@ -13,6 +13,7 @@ Plain HTML form, no auth, no Datastar.
   - Meeting place / address (text, required)
   - Payment preference: bank transfer or cash (radio buttons)
   - If bank: sort code + account number fields (shown via basic JS toggle)
+- Data retention notice below the submit button: "Your information will be retained for 6 months and then automatically deleted." with a link to `/privacy` (privacy page itself is out of scope for now)
 - `POST /apply` runs `submitApplication`, then redirects to `/apply/result?status=accepted|rejected|flagged&reason=...`
 - Result page shows:
   - **accepted**: "You're in this month's lottery pool"

@@ -502,6 +502,10 @@ export function applyPage(): string {
           </div>
         </div>
         <button type="submit" class="${btnAmber}">Submit Application</button>
+        <p class="text-xs text-bark-muted mt-4 text-center">
+          Your information will be retained for 6 months and then automatically deleted.
+          <a href="/privacy" class="underline hover:text-bark">Privacy Policy</a>
+        </p>
       </form>
     </div>
   </div>
