@@ -1,19 +1,27 @@
-import { describe, test, expect } from "bun:test";
-import { recipientsPage } from "../../src/web/pages/recipients";
+import { describe, expect, test } from "bun:test";
 import type { Recipient } from "../../src/domain/recipient/types";
+import { recipientsPage } from "../../src/web/pages/recipients";
 
 const alice: Recipient = {
-	id: "r-1", phone: "07700900001", name: "Alice Smith",
-	email: "alice@example.com", paymentPreference: "bank",
+	id: "r-1",
+	phone: "07700900001",
+	name: "Alice Smith",
+	email: "alice@example.com",
+	paymentPreference: "bank",
 	bankDetails: { sortCode: "12-34-56", accountNumber: "12345678" },
 	notes: "Prefers mornings",
-	createdAt: "2026-03-01T00:00:00.000Z", updatedAt: "2026-03-01T00:00:00.000Z",
+	createdAt: "2026-03-01T00:00:00.000Z",
+	updatedAt: "2026-03-01T00:00:00.000Z",
 };
 
 const bob: Recipient = {
-	id: "r-2", phone: "07700900002", name: "Bob Jones",
-	paymentPreference: "cash", meetingPlace: "Mill Road",
-	createdAt: "2026-03-02T00:00:00.000Z", updatedAt: "2026-03-02T00:00:00.000Z",
+	id: "r-2",
+	phone: "07700900002",
+	name: "Bob Jones",
+	paymentPreference: "cash",
+	meetingPlace: "Mill Road",
+	createdAt: "2026-03-02T00:00:00.000Z",
+	updatedAt: "2026-03-02T00:00:00.000Z",
 };
 
 describe("recipientsPage", () => {

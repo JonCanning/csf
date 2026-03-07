@@ -1,6 +1,10 @@
-import { describe, test, expect } from "bun:test";
-import { viewPanel, editPanel, createPanel } from "../../src/web/pages/recipientPanel";
+import { describe, expect, test } from "bun:test";
 import type { Recipient } from "../../src/domain/recipient/types";
+import {
+	createPanel,
+	editPanel,
+	viewPanel,
+} from "../../src/web/pages/recipientPanel";
 
 const alice: Recipient = {
 	id: "r-1",

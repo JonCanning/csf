@@ -61,8 +61,8 @@ export function viewPanel(r: Recipient): string {
       <button class="${btnSecondary}" data-on-click="
         document.getElementById('delete-area').innerHTML=\`
           <span class='font-body text-bark-muted text-sm'>Are you sure?</span>
-          <button class='${btnAmber}' data-on-click='@delete(\"/recipients/${r.id}\")'>Confirm</button>
-          <button class='${btnSecondary}' data-on-click='@get(\"/recipients/${r.id}\")'>Cancel</button>
+          <button class='${btnAmber}' data-on-click='@delete("/recipients/${r.id}")'>Confirm</button>
+          <button class='${btnSecondary}' data-on-click='@get("/recipients/${r.id}")'>Cancel</button>
         \`
       ">Delete</button>
     </div>
