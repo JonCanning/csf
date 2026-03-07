@@ -62,9 +62,7 @@ export function createLotteryRoutes(
 
 		async handleOpen(): Promise<Response> {
 			await openApplicationWindow(monthCycle, eventStore);
-			return sseResponse(
-				patchElements(lotteryContent(monthCycle, "open")),
-			);
+			return sseResponse(patchElements(lotteryContent(monthCycle, "open")));
 		},
 
 		async handleClose(): Promise<Response> {
@@ -100,16 +98,14 @@ export function createLotteryRoutes(
 
 			// Read back the LotteryDrawn event to feed the process manager
 			const stream = await eventStore.readStream(`lottery-${monthCycle}`);
-			const drawnEvent = stream.events.find(
-				(e) => e.type === "LotteryDrawn",
-			) as LotteryDrawn | undefined;
+			const drawnEvent = stream.events.find((e) => e.type === "LotteryDrawn") as
+				| LotteryDrawn
+				| undefined;
 			if (drawnEvent) {
 				await processLotteryDrawn(drawnEvent, eventStore);
 			}
 
-			return sseResponse(
-				redirectTo(`/applications?month=${monthCycle}`),
-			);
+			return sseResponse(redirectTo(`/applications?month=${monthCycle}`));
 		},
 	};
 }

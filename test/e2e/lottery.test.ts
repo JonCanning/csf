@@ -11,7 +11,9 @@ test.describe("lottery lifecycle", () => {
 
 		// Open the window
 		await page.locator("button", { hasText: "Open Applications" }).click();
-		await expect(page.locator("text=Close Applications")).toBeVisible({ timeout: 10000 });
+		await expect(page.locator("text=Close Applications")).toBeVisible({
+			timeout: 10000,
+		});
 
 		// Close the window
 		await page.locator("button", { hasText: "Close Applications" }).click();

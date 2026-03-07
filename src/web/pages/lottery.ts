@@ -76,7 +76,10 @@ export function lotteryPage(monthCycle: string, status: LotteryStatus): string {
 	return layout("Lottery", body);
 }
 
-export function lotteryContent(monthCycle: string, status: LotteryStatus): string {
+export function lotteryContent(
+	monthCycle: string,
+	status: LotteryStatus,
+): string {
 	return `<div id="lottery-content" class="card p-6">
 		<h2 class="font-heading font-semibold text-lg mb-4">${escapeHtml(monthCycle)}</h2>
 		${actionSection(monthCycle, status)}

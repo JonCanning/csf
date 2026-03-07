@@ -1,5 +1,5 @@
-import { CommandHandler } from "@event-driven-io/emmett";
 import type { EventStore } from "@event-driven-io/emmett";
+import { CommandHandler } from "@event-driven-io/emmett";
 import { decide, evolve, initialState } from "./decider.ts";
 import type { LotteryApplicant, LotteryEvent } from "./types.ts";
 

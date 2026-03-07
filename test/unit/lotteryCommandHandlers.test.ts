@@ -1,12 +1,12 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
-	getInMemoryEventStore,
 	type EventStore,
+	getInMemoryEventStore,
 } from "@event-driven-io/emmett";
 import {
-	openApplicationWindow,
 	closeApplicationWindow,
 	drawLottery,
+	openApplicationWindow,
 } from "../../src/domain/lottery/commandHandlers.ts";
 
 describe("lottery command handlers", () => {

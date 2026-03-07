@@ -2,7 +2,11 @@ import { sqliteProjection } from "@event-driven-io/emmett-sqlite";
 import type { LotteryEvent } from "../../domain/lottery/types.ts";
 
 export const lotteryWindowProjection = sqliteProjection<LotteryEvent>({
-	canHandle: ["ApplicationWindowOpened", "ApplicationWindowClosed", "LotteryDrawn"],
+	canHandle: [
+		"ApplicationWindowOpened",
+		"ApplicationWindowClosed",
+		"LotteryDrawn",
+	],
 
 	init: async ({ context: { connection } }) => {
 		await connection.command(`
