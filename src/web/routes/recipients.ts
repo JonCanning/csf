@@ -108,13 +108,11 @@ export function createRecipientRoutes(
 				`recipient-${id}`,
 			);
 			if (events.length === 0)
-				return new Response("Not found", { status: 404 });
+				return sseResponse(patchElements(historyPanel([])));
 
 			const volunteerIds = new Set(
 				events
-					.map((e) =>
-						"volunteerId" in e.data ? e.data.volunteerId : undefined,
-					)
+					.map((e) => e.data.volunteerId)
 					.filter((vid): vid is string => !!vid),
 			);
 
@@ -125,14 +123,13 @@ export function createRecipientRoutes(
 			}
 
 			const entries: HistoryEntry[] = events.map((e) => {
-				const volunteerId =
-					"volunteerId" in e.data ? e.data.volunteerId : undefined;
+				const volunteerId = e.data.volunteerId;
 				const timestamp =
-					"createdAt" in e.data
+					e.type === "RecipientCreated"
 						? e.data.createdAt
-						: "updatedAt" in e.data
+						: e.type === "RecipientUpdated"
 							? e.data.updatedAt
-							: (e.data as { deletedAt: string }).deletedAt;
+							: e.data.deletedAt;
 				return {
 					type: e.type,
 					volunteerName: volunteerId

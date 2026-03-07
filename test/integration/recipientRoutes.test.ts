@@ -194,9 +194,10 @@ describe("recipient routes", () => {
 			expect(body).toContain("Updated");
 		});
 
-		test("returns 404 for unknown recipient", async () => {
+		test("returns empty history for unknown recipient", async () => {
 			const res = await routes.history("nonexistent");
-			expect(res.status).toBe(404);
+			const body = await res.text();
+			expect(body).toContain("No history");
 		});
 
 		test("shows 'via application' when no volunteerId", async () => {
