@@ -39,7 +39,7 @@ function actionSection(month: string, status: LotteryStatus): string {
 				<form data-on-submit="@post('/lottery/draw')" class="space-y-4 max-w-sm">
 					<div>
 						<label class="label" for="availableBalance">Available Balance</label>
-						<input id="availableBalance" name="availableBalance" type="number" step="0.01" min="0" required class="input" data-bind-availableBalance />
+						<input id="availableBalance" name="availableBalance" type="number" step="0.01" min="0" required class="input" data-bind-availablebalance />
 					</div>
 					<div>
 						<label class="label" for="reserve">Reserve</label>
@@ -47,7 +47,7 @@ function actionSection(month: string, status: LotteryStatus): string {
 					</div>
 					<div>
 						<label class="label" for="grantAmount">Grant Amount</label>
-						<input id="grantAmount" name="grantAmount" type="number" step="0.01" min="0.01" required class="input" data-bind-grantAmount />
+						<input id="grantAmount" name="grantAmount" type="number" step="0.01" min="0.01" required class="input" data-bind-grantamount />
 					</div>
 					<button type="submit" class="btn btn-primary">Run Draw</button>
 				</form>`;
@@ -58,7 +58,7 @@ function actionSection(month: string, status: LotteryStatus): string {
 }
 
 export function lotteryPage(monthCycle: string, status: LotteryStatus): string {
-	const body = `<div class="max-w-2xl mx-auto px-4 py-8" data-signals='{"availableBalance": "", "reserve": "", "grantAmount": ""}'>
+	const body = `<div class="max-w-2xl mx-auto px-4 py-8" data-signals='{"availablebalance": "", "reserve": "", "grantamount": ""}'>
 	<div class="flex items-center justify-between mb-6">
 		<div class="flex items-center gap-3">
 			<a href="/" class="text-bark-muted hover:text-bark transition-colors text-sm">&larr; Back</a>

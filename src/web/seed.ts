@@ -11,12 +11,15 @@ if (existing) {
 	console.log("Test user already exists");
 } else {
 	await createVolunteer(
-		{ name: "Test", password: "test", isAdmin: true, requiresPasswordReset: false },
+		{
+			name: "Test",
+			password: "test",
+			isAdmin: true,
+			requiresPasswordReset: false,
+		},
 		store,
 	);
-	console.log(
-		"Created test user — name: Test, password: test (admin)",
-	);
+	console.log("Created test user — name: Test, password: test (admin)");
 }
 
 await pool.close();

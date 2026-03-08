@@ -3,6 +3,8 @@ import type {
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
 import type { ApplicationRepository } from "../../domain/application/repository.ts";
+import type { ApplicationSelected } from "../../domain/application/types.ts";
+import { processApplicationSelected } from "../../domain/grant/processManager.ts";
 import {
 	closeApplicationWindow,
 	drawLottery,
@@ -103,6 +105,19 @@ export function createLotteryRoutes(
 				| undefined;
 			if (drawnEvent) {
 				await processLotteryDrawn(drawnEvent, eventStore);
+
+				// Create grants for each selected application
+				for (const selected of drawnEvent.data.selected) {
+					const appStream = await eventStore.readStream(
+						`application-${selected.applicationId}`,
+					);
+					const selectedEvent = appStream.events.find(
+						(e) => e.type === "ApplicationSelected",
+					) as ApplicationSelected | undefined;
+					if (selectedEvent) {
+						await processApplicationSelected(selectedEvent, eventStore, pool);
+					}
+				}
 			}
 
 			return sseResponse(redirectTo(`/applications?month=${monthCycle}`));

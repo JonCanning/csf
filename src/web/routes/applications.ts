@@ -69,7 +69,9 @@ export function createApplicationRoutes(
 
 			const eligibility =
 				decision === "confirm"
-					? await checkEligibility(app.applicantId, app.monthCycle, pool)
+					? await checkEligibility(app.applicantId, app.monthCycle, pool, {
+							skipWindowCheck: true,
+						})
 					: ({ status: "eligible" } as const);
 
 			await reviewApplication(

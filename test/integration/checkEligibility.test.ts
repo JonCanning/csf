@@ -142,6 +142,37 @@ describe("checkEligibility", () => {
 		});
 	});
 
+	test("skipWindowCheck allows eligibility when window is closed", async () => {
+		// Window never opened — normally returns window_closed
+		const closed = await checkEligibility(
+			"applicant-07700900001",
+			"2026-03",
+			pool,
+		);
+		expect(closed).toEqual({ status: "window_closed" });
+
+		// With skipWindowCheck, eligible despite closed window
+		const result = await checkEligibility(
+			"applicant-07700900001",
+			"2026-03",
+			pool,
+			{ skipWindowCheck: true },
+		);
+		expect(result).toEqual({ status: "eligible" });
+	});
+
+	test("skipWindowCheck still enforces cooldown", async () => {
+		await submitAcceptAndSelect("applicant-07700900001", "2026-02", "app-1");
+
+		const result = await checkEligibility(
+			"applicant-07700900001",
+			"2026-03",
+			pool,
+			{ skipWindowCheck: true },
+		);
+		expect(result).toEqual({ status: "cooldown", lastGrantMonth: "2026-02" });
+	});
+
 	test("accepted-only does not trigger cooldown", async () => {
 		await openWindow("2026-03");
 		await submitAndAccept("applicant-07700900001", "2026-01", "app-1");

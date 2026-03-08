@@ -1,0 +1,30 @@
+export type GrantRow = {
+	id: string;
+	applicationId: string;
+	applicantId: string;
+	monthCycle: string;
+	rank: number;
+	status: string;
+	paymentPreference: string;
+	volunteerId: string | null;
+	volunteerName: string | null;
+	applicantName: string | null;
+	applicantPhone: string | null;
+	poaAttempts: number;
+	amount: number | null;
+	paymentMethod: string | null;
+	paidBy: string | null;
+	paidAt: string | null;
+	expenseReference: string | null;
+	reimbursedAt: string | null;
+	releasedReason: string | null;
+	releasedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export interface GrantRepository {
+	getById(id: string): Promise<GrantRow | null>;
+	listByMonth(monthCycle: string): Promise<GrantRow[]>;
+	listDistinctMonths(): Promise<string[]>;
+}

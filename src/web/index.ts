@@ -11,7 +11,7 @@ const sessionStore = await SQLiteSessionStore(pool);
 const volunteerRepo = await SQLiteVolunteerRepository(pool);
 const applicantRepo = await SQLiteApplicantRepository(pool);
 
-const server = startServer(
+const server = await startServer(
 	sessionStore,
 	volunteerRepo,
 	applicantRepo,

@@ -20,9 +20,9 @@ test.describe("lottery lifecycle", () => {
 		await expect(page.locator("text=Run Draw")).toBeVisible({ timeout: 10000 });
 
 		// Fill draw form (no applications in pool, that's fine — empty draw)
-		await page.locator("input[data-bind-availableBalance]").fill("200");
+		await page.locator("input[data-bind-availablebalance]").fill("200");
 		await page.locator("input[data-bind-reserve]").fill("0");
-		await page.locator("input[data-bind-grantAmount]").fill("40");
+		await page.locator("input[data-bind-grantamount]").fill("40");
 		await page.locator("button", { hasText: "Run Draw" }).click();
 
 		// Should redirect to applications page

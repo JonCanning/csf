@@ -6,6 +6,8 @@ import type { ApplicantRepository } from "../domain/applicant/repository.ts";
 import type { VolunteerRepository } from "../domain/volunteer/repository.ts";
 import { SQLiteApplicationRepository } from "../infrastructure/application/sqliteApplicationRepository.ts";
 import { getSessionId } from "../infrastructure/auth/cookie.ts";
+import { SQLiteGrantRepository } from "../infrastructure/grant/sqliteGrantRepository.ts";
+import { GrantDocumentStore } from "../infrastructure/projections/grantDocuments.ts";
 import type { SessionStore } from "../infrastructure/session/sqliteSessionStore.ts";
 import { changePasswordPage } from "./pages/changePassword.ts";
 import { dashboardPage } from "./pages/dashboard.ts";
@@ -19,6 +21,7 @@ import {
 	handleLogin,
 	handleLogout,
 } from "./routes/auth.ts";
+import { createGrantRoutes } from "./routes/grants.ts";
 import { createLotteryRoutes } from "./routes/lottery.ts";
 import { createVolunteerRoutes } from "./routes/volunteers.ts";
 
@@ -34,7 +37,7 @@ export async function getAuthenticatedVolunteer(
 	return volunteerRepo.getById(volunteerId);
 }
 
-export function startServer(
+export async function startServer(
 	sessionStore: SessionStore,
 	volunteerRepo: VolunteerRepository,
 	applicantRepo: ApplicantRepository,
@@ -66,6 +69,15 @@ export function startServer(
 		pool,
 	);
 	const lotteryRoutes = createLotteryRoutes(appRepo, eventStore, pool);
+	const grantRepo = SQLiteGrantRepository(pool);
+	const docStore = GrantDocumentStore(pool);
+	await docStore.init();
+	const grantRoutes = createGrantRoutes(
+		grantRepo,
+		volunteerRepo,
+		docStore,
+		eventStore,
+	);
 	const altchaRoutes = createAltchaRoutes(hmacKey);
 	const changePasswordHandler = handleChangePassword(volunteerRepo, eventStore);
 
@@ -160,6 +172,21 @@ export function startServer(
 					if (!volunteer.isAdmin)
 						return new Response("Forbidden", { status: 403 });
 					return volunteerRoutes.closePanel();
+				},
+			},
+			"/grants": {
+				GET: async (req) => {
+					const volunteer = await requireAuth(req);
+					if (!volunteer) return Response.redirect("/login", 302);
+					const url = new URL(req.url);
+					return grantRoutes.list(url.searchParams.get("month") ?? undefined);
+				},
+			},
+			"/grants/close": {
+				GET: async (req) => {
+					const volunteer = await requireAuth(req);
+					if (!volunteer) return Response.redirect("/login", 302);
+					return grantRoutes.closePanel();
 				},
 			},
 			"/applications": {
@@ -269,6 +296,126 @@ export function startServer(
 					return volunteerRoutes.handleUpdate(id, req, volunteer.id);
 			}
 
+			// Grant document serving
+			const grantDocMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/documents\/poa$/,
+			);
+			if (grantDocMatch?.[1] && req.method === "GET") {
+				const docs = await docStore.getByGrantId(grantDocMatch[1]);
+				const poa = docs.find((d) => d.type === "proof_of_address");
+				if (!poa) return new Response("Not found", { status: 404 });
+				return grantRoutes.serveDocument(poa.id);
+			}
+
+			// Grant actions (must come before grant detail match)
+			const grantAssignMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/assign-volunteer$/,
+			);
+			if (grantAssignMatch?.[1] && req.method === "POST") {
+				const volunteerId = new URL(req.url).searchParams.get("volunteerId");
+				if (!volunteerId)
+					return new Response("Missing volunteerId", { status: 400 });
+				return grantRoutes.handleAssignVolunteer(
+					grantAssignMatch[1],
+					volunteerId,
+				);
+			}
+
+			const grantBankMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/submit-bank-details$/,
+			);
+			if (grantBankMatch?.[1] && req.method === "POST") {
+				return grantRoutes.handleSubmitBankDetails(grantBankMatch[1], req);
+			}
+
+			const grantApprovePoaMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/approve-poa$/,
+			);
+			if (grantApprovePoaMatch?.[1] && req.method === "POST") {
+				return grantRoutes.handleApprovePoa(
+					grantApprovePoaMatch[1],
+					volunteer.id,
+				);
+			}
+
+			const grantRejectPoaMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/reject-poa$/,
+			);
+			if (grantRejectPoaMatch?.[1] && req.method === "POST") {
+				return grantRoutes.handleRejectPoa(
+					grantRejectPoaMatch[1],
+					volunteer.id,
+				);
+			}
+
+			const grantAcceptCashMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/accept-cash$/,
+			);
+			if (grantAcceptCashMatch?.[1] && req.method === "POST") {
+				return grantRoutes.handleAcceptCash(grantAcceptCashMatch[1]);
+			}
+
+			const grantDeclineCashMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/decline-cash$/,
+			);
+			if (grantDeclineCashMatch?.[1] && req.method === "POST") {
+				return grantRoutes.handleDeclineCash(grantDeclineCashMatch[1]);
+			}
+
+			const grantPaymentMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/record-payment$/,
+			);
+			if (grantPaymentMatch?.[1] && req.method === "POST") {
+				const params = new URL(req.url).searchParams;
+				const rawAmount = params.get("amount");
+				const method = params.get("method");
+				const amount = Number(rawAmount);
+				if (!rawAmount || Number.isNaN(amount) || amount <= 0) {
+					return new Response("Invalid amount", { status: 400 });
+				}
+				if (method !== "bank" && method !== "cash") {
+					return new Response("Invalid payment method", { status: 400 });
+				}
+				return grantRoutes.handleRecordPayment(
+					grantPaymentMatch[1],
+					amount,
+					method,
+					volunteer.id,
+				);
+			}
+
+			const grantReimburseMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/record-reimbursement$/,
+			);
+			if (grantReimburseMatch?.[1] && req.method === "POST") {
+				const expenseReference =
+					new URL(req.url).searchParams.get("expenseReference") ?? "";
+				return grantRoutes.handleRecordReimbursement(
+					grantReimburseMatch[1],
+					expenseReference,
+					volunteer.id,
+				);
+			}
+
+			const grantReleaseMatch = url.pathname.match(
+				/^\/grants\/([^/]+)\/release$/,
+			);
+			if (grantReleaseMatch?.[1] && req.method === "POST") {
+				const reason =
+					new URL(req.url).searchParams.get("reason") ?? "Released";
+				return grantRoutes.handleRelease(
+					grantReleaseMatch[1],
+					reason,
+					volunteer.id,
+				);
+			}
+
+			// Grant detail
+			const grantIdMatch = url.pathname.match(/^\/grants\/([^/]+)$/);
+			if (grantIdMatch?.[1] && req.method === "GET") {
+				return grantRoutes.detail(grantIdMatch[1]);
+			}
+
 			// Application review (must come before detail match)
 			const appReviewMatch = url.pathname.match(
 				/^\/applications\/([^/]+)\/review$/,
@@ -299,9 +446,9 @@ export function startServer(
 			}
 			if (url.pathname === "/lottery/draw" && req.method === "POST") {
 				const signals = await req.json();
-				const balance = Number(signals.availableBalance);
+				const balance = Number(signals.availablebalance);
 				const reserve = Number(signals.reserve);
-				const grant = Number(signals.grantAmount);
+				const grant = Number(signals.grantamount);
 				if ([balance, reserve, grant].some(Number.isNaN)) {
 					return new Response("Invalid input", { status: 400 });
 				}

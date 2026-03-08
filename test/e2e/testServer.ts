@@ -21,7 +21,7 @@ const { id } = await createVolunteer(
 );
 await changePassword(id, "test", eventStore);
 
-const server = startServer(
+const server = await startServer(
 	sessionStore,
 	volunteerRepo,
 	applicantRepo,
