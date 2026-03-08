@@ -10,6 +10,7 @@ import type { SessionStore } from "../infrastructure/session/sqliteSessionStore.
 import { changePasswordPage } from "./pages/changePassword.ts";
 import { dashboardPage } from "./pages/dashboard.ts";
 import { loginPage } from "./pages/login.ts";
+import { createAltchaRoutes } from "./routes/altcha.ts";
 import { createApplicationRoutes } from "./routes/applications.ts";
 import { createApplyRoutes } from "./routes/apply.ts";
 import {
@@ -59,6 +60,8 @@ export function startServer(
 		pool,
 	);
 	const lotteryRoutes = createLotteryRoutes(appRepo, eventStore, pool);
+	const hmacKey = process.env.ALTCHA_HMAC_KEY ?? "change-me-in-production";
+	const altchaRoutes = createAltchaRoutes(hmacKey);
 	const changePasswordHandler = handleChangePassword(volunteerRepo, eventStore);
 
 	async function requireAuth(req: Request) {
@@ -74,6 +77,9 @@ export function startServer(
 			},
 			"/apply/result": {
 				GET: (req) => applyRoutes.showResult(req),
+			},
+			"/api/altcha/challenge": {
+				GET: () => altchaRoutes.challenge(),
 			},
 			"/styles/app.css": {
 				GET: async () => {
