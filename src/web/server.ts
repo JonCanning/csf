@@ -45,7 +45,13 @@ export function startServer(
 	const login = handleLogin(sessionStore, volunteerRepo);
 	const logout = handleLogout(sessionStore);
 	const loginHtml = loginPage();
-	const applyRoutes = createApplyRoutes(eventStore, pool, recipientRepo, hmacKey);
+	const hmacKey = process.env.ALTCHA_HMAC_KEY ?? "change-me-in-production";
+	const applyRoutes = createApplyRoutes(
+		eventStore,
+		pool,
+		recipientRepo,
+		hmacKey,
+	);
 	const recipientRoutes = createRecipientRoutes(
 		recipientRepo,
 		volunteerRepo,
@@ -60,7 +66,6 @@ export function startServer(
 		pool,
 	);
 	const lotteryRoutes = createLotteryRoutes(appRepo, eventStore, pool);
-	const hmacKey = process.env.ALTCHA_HMAC_KEY ?? "change-me-in-production";
 	const altchaRoutes = createAltchaRoutes(hmacKey);
 	const changePasswordHandler = handleChangePassword(volunteerRepo, eventStore);
 
