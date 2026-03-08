@@ -2,8 +2,10 @@ import { type ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test as base, type Page } from "@playwright/test";
+import { solveChallenge } from "altcha-lib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const BASE_URL = "http://localhost:3001";
 
 type Fixtures = {
 	serverInstance: undefined;
@@ -69,3 +71,75 @@ export const test = base.extend<Fixtures>({
 });
 
 export { expect } from "@playwright/test";
+
+/** Fetch challenge from test server, solve it, return base64 payload for the form */
+export async function solveAltcha(): Promise<string> {
+	const res = await fetch(`${BASE_URL}/api/altcha/challenge`);
+	const challenge = await res.json();
+	const { promise } = solveChallenge(
+		challenge.challenge,
+		challenge.salt,
+		challenge.algorithm,
+		challenge.maxnumber,
+	);
+	const solution = await promise;
+	if (!solution) throw new Error("Failed to solve altcha challenge");
+	const payload = {
+		algorithm: challenge.algorithm,
+		challenge: challenge.challenge,
+		number: solution.number,
+		salt: challenge.salt,
+		signature: challenge.signature,
+	};
+	return btoa(JSON.stringify(payload));
+}
+
+/** Submit a public application via POST /apply */
+export async function submitApplication(
+	page: Page,
+	opts: {
+		name: string;
+		phone: string;
+		paymentPreference?: "cash" | "bank";
+		meetingPlace?: string;
+	},
+): Promise<{ ok: boolean; url: string }> {
+	const altcha = await solveAltcha();
+	const res = await page.request.post("/apply", {
+		multipart: {
+			name: opts.name,
+			phone: opts.phone,
+			meetingPlace: opts.meetingPlace ?? "Town Hall",
+			paymentPreference: opts.paymentPreference ?? "cash",
+			altcha,
+		},
+	});
+	return { ok: res.ok(), url: res.url() };
+}
+
+/** Open lottery window, optionally close it, optionally run draw */
+export async function openLotteryWindow(page: Page): Promise<void> {
+	await page.goto("/lottery");
+	await page.locator("button", { hasText: "Open Applications" }).click();
+	await page.locator("text=Close Applications").waitFor({ timeout: 10000 });
+}
+
+export async function closeLotteryWindow(page: Page): Promise<void> {
+	await page.goto("/lottery");
+	await page.locator("button", { hasText: "Close Applications" }).click();
+	await page.locator("text=Run Draw").waitFor({ timeout: 10000 });
+}
+
+export async function runLotteryDraw(
+	page: Page,
+	opts: { balance: number; reserve?: number; grantAmount?: number },
+): Promise<void> {
+	const balanceInput = page.locator("input[data-bind-availablebalance]");
+	const reserveInput = page.locator("input[data-bind-reserve]");
+	const grantInput = page.locator("input[data-bind-grantamount]");
+	await balanceInput.fill(String(opts.balance));
+	await reserveInput.fill(String(opts.reserve ?? 0));
+	await grantInput.fill(String(opts.grantAmount ?? 40));
+	await page.locator("button", { hasText: "Run Draw" }).click();
+	await page.waitForURL("**/applications**", { timeout: 10000 });
+}
