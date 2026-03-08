@@ -1,8 +1,8 @@
-import { verifySolution } from "altcha-lib";
 import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
+import { verifySolution } from "altcha-lib";
 import { toApplicantId } from "../../domain/application/applicantId.ts";
 import { checkEligibility } from "../../domain/application/checkEligibility.ts";
 import { submitApplication } from "../../domain/application/submitApplication.ts";

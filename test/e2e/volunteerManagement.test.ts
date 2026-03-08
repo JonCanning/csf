@@ -91,9 +91,7 @@ test.describe("volunteer management", () => {
 
 		// Click Disable Account, then Confirm
 		await page.locator("#panel button", { hasText: "Disable" }).click();
-		await expect(
-			page.locator("#panel", { hasText: "Sure?" }),
-		).toBeVisible();
+		await expect(page.locator("#panel", { hasText: "Sure?" })).toBeVisible();
 		await page.locator("#panel button", { hasText: "Confirm" }).click();
 
 		// Volunteer should be marked as disabled in the table
