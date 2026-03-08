@@ -20,11 +20,11 @@ export const initialState = (): ApplicationState => ({ status: "initial" });
 
 function resolveApplicantId(
 	resolution: IdentityResolution,
-	phone: string,
+	data: { phone: string; name: string },
 ): string {
 	switch (resolution.type) {
 		case "new":
-			return toApplicantId(phone);
+			return toApplicantId(data.phone, data.name);
 		case "matched":
 		case "flagged":
 			return resolution.applicantId;
@@ -60,7 +60,7 @@ function decideSubmit(
 	const { data } = command;
 	const applicantId = resolveApplicantId(
 		data.identityResolution,
-		data.identity.phone,
+		data.identity,
 	);
 	const now = data.submittedAt;
 

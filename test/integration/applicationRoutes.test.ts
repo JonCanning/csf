@@ -3,18 +3,18 @@ import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
+import type { ApplicantRepository } from "../../src/domain/applicant/repository.ts";
 import type { ApplicationRepository } from "../../src/domain/application/repository.ts";
 import { submitApplication } from "../../src/domain/application/submitApplication.ts";
-import type { RecipientRepository } from "../../src/domain/recipient/repository.ts";
+import { SQLiteApplicantRepository } from "../../src/infrastructure/applicant/sqliteApplicantRepository.ts";
 import { SQLiteApplicationRepository } from "../../src/infrastructure/application/sqliteApplicationRepository.ts";
 import { createEventStore } from "../../src/infrastructure/eventStore.ts";
-import { SQLiteRecipientRepository } from "../../src/infrastructure/recipient/sqliteRecipientRepository.ts";
 import { createApplicationRoutes } from "../../src/web/routes/applications.ts";
 
 describe("application routes", () => {
 	let eventStore: SQLiteEventStore;
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
-	let recipientRepo: RecipientRepository;
+	let applicantRepo: ApplicantRepository;
 	let appRepo: ApplicationRepository;
 	let routes: ReturnType<typeof createApplicationRoutes>;
 
@@ -22,9 +22,9 @@ describe("application routes", () => {
 		const es = createEventStore(":memory:");
 		eventStore = es.store;
 		pool = es.pool;
-		recipientRepo = await SQLiteRecipientRepository(pool);
+		applicantRepo = await SQLiteApplicantRepository(pool);
 		appRepo = SQLiteApplicationRepository(pool);
-		routes = createApplicationRoutes(appRepo, recipientRepo, eventStore, pool);
+		routes = createApplicationRoutes(appRepo, applicantRepo, eventStore, pool);
 	});
 
 	afterEach(async () => {
@@ -54,7 +54,7 @@ describe("application routes", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 	}
 
@@ -106,7 +106,7 @@ describe("application routes", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			const res = await routes.detail("app-flagged");
@@ -145,7 +145,7 @@ describe("application routes", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			const res = await routes.handleReview("app-flagged", "confirm", "vol-1");
@@ -178,7 +178,7 @@ describe("application routes", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			const res = await routes.handleReview("app-flagged", "reject", "vol-1");

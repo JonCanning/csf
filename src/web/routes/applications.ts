@@ -2,10 +2,10 @@ import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
+import type { ApplicantRepository } from "../../domain/applicant/repository.ts";
 import { checkEligibility } from "../../domain/application/checkEligibility.ts";
 import type { ApplicationRepository } from "../../domain/application/repository.ts";
 import { reviewApplication } from "../../domain/application/reviewApplication.ts";
-import type { RecipientRepository } from "../../domain/recipient/repository.ts";
 import { reviewPanel, viewPanel } from "../pages/applicationPanel.ts";
 import {
 	applicationsPage,
@@ -22,7 +22,7 @@ function currentMonthCycle(): string {
 
 export function createApplicationRoutes(
 	appRepo: ApplicationRepository,
-	_recipientRepo: RecipientRepository,
+	applicantRepo: ApplicantRepository,
 	eventStore: SQLiteEventStore,
 	pool: ReturnType<typeof SQLiteConnectionPool>,
 ) {
@@ -42,8 +42,14 @@ export function createApplicationRoutes(
 		async detail(id: string): Promise<Response> {
 			const app = await appRepo.getById(id);
 			if (!app) return new Response("Not found", { status: 404 });
+			const applicant =
+				app.phone && app.name
+					? await applicantRepo.getByPhoneAndName(app.phone, app.name)
+					: null;
 			const panel =
-				app.status === "flagged" ? reviewPanel(app) : viewPanel(app);
+				app.status === "flagged"
+					? reviewPanel(app, applicant?.id ?? null)
+					: viewPanel(app, applicant?.id ?? null);
 			return sseResponse(patchElements(panel));
 		},
 

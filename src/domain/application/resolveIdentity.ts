@@ -1,28 +1,26 @@
-import type { RecipientRepository } from "../recipient/repository.ts";
-import { toApplicantId } from "./applicantId.ts";
-import { normalizeName } from "./normalizeName.ts";
+import type { ApplicantRepository } from "../applicant/repository.ts";
 import type { IdentityResolution } from "./types.ts";
 
 export async function resolveIdentity(
 	phone: string,
 	name: string,
-	recipientRepo: RecipientRepository,
+	applicantRepo: ApplicantRepository,
 ): Promise<IdentityResolution> {
-	const existing = await recipientRepo.getByPhone(phone);
+	const exactMatch = await applicantRepo.getByPhoneAndName(phone, name);
 
-	if (!existing) {
-		return { type: "new" };
+	if (exactMatch) {
+		return { type: "matched", applicantId: exactMatch.id };
 	}
 
-	const applicantId = toApplicantId(phone);
+	const phoneMatches = await applicantRepo.getByPhone(phone);
 
-	if (normalizeName(name) === normalizeName(existing.name)) {
-		return { type: "matched", applicantId };
+	if (phoneMatches.length === 0) {
+		return { type: "new" };
 	}
 
 	return {
 		type: "flagged",
-		applicantId,
+		applicantId: phoneMatches[0].id,
 		reason: "Phone matches but name differs",
 	};
 }

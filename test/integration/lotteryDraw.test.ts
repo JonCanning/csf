@@ -4,6 +4,8 @@ import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
+import type { ApplicantRepository } from "../../src/domain/applicant/repository.ts";
+import { toApplicantId } from "../../src/domain/application/applicantId.ts";
 import { checkEligibility } from "../../src/domain/application/checkEligibility.ts";
 import { submitApplication } from "../../src/domain/application/submitApplication.ts";
 import type { ApplicationEvent } from "../../src/domain/application/types.ts";
@@ -14,20 +16,19 @@ import {
 } from "../../src/domain/lottery/decider.ts";
 import { processLotteryDrawn } from "../../src/domain/lottery/processManager.ts";
 import type { LotteryEvent } from "../../src/domain/lottery/types.ts";
-import type { RecipientRepository } from "../../src/domain/recipient/repository.ts";
+import { SQLiteApplicantRepository } from "../../src/infrastructure/applicant/sqliteApplicantRepository.ts";
 import { createEventStore } from "../../src/infrastructure/eventStore.ts";
-import { SQLiteRecipientRepository } from "../../src/infrastructure/recipient/sqliteRecipientRepository.ts";
 
 describe("lottery draw end-to-end", () => {
 	let eventStore: SQLiteEventStore;
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
-	let recipientRepo: RecipientRepository;
+	let applicantRepo: ApplicantRepository;
 
 	beforeEach(async () => {
 		const es = createEventStore(":memory:");
 		eventStore = es.store;
 		pool = es.pool;
-		recipientRepo = await SQLiteRecipientRepository(pool);
+		applicantRepo = await SQLiteApplicantRepository(pool);
 	});
 
 	afterEach(async () => {
@@ -46,7 +47,7 @@ describe("lottery draw end-to-end", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 	}
 
@@ -196,7 +197,7 @@ describe("lottery draw end-to-end", () => {
 							applicantPool: [
 								{
 									applicationId: "app-1",
-									applicantId: "applicant-07700900001",
+									applicantId: toApplicantId("07700900001", "Alice"),
 								},
 							],
 							seed: "test-seed",
@@ -265,7 +266,7 @@ describe("lottery draw end-to-end", () => {
 							applicantPool: [
 								{
 									applicationId: "app-1",
-									applicantId: "applicant-07700900001",
+									applicantId: toApplicantId("07700900001", "Alice"),
 								},
 							],
 							seed: "test-seed",
@@ -289,7 +290,7 @@ describe("lottery draw end-to-end", () => {
 		]);
 
 		const result = await checkEligibility(
-			"applicant-07700900001",
+			toApplicantId("07700900001", "Alice"),
 			"2026-04",
 			pool,
 		);

@@ -4,15 +4,15 @@ import type {
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
 import { createChallenge, solveChallenge } from "altcha-lib";
-import type { RecipientRepository } from "../../src/domain/recipient/repository.ts";
+import type { ApplicantRepository } from "../../src/domain/applicant/repository.ts";
+import { SQLiteApplicantRepository } from "../../src/infrastructure/applicant/sqliteApplicantRepository.ts";
 import { createEventStore } from "../../src/infrastructure/eventStore.ts";
-import { SQLiteRecipientRepository } from "../../src/infrastructure/recipient/sqliteRecipientRepository.ts";
 import { createApplyRoutes } from "../../src/web/routes/apply.ts";
 
 describe("apply routes", () => {
 	let eventStore: SQLiteEventStore;
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
-	let recipientRepo: RecipientRepository;
+	let applicantRepo: ApplicantRepository;
 	let routes: ReturnType<typeof createApplyRoutes>;
 	const hmacKey = "test-hmac-key";
 
@@ -40,8 +40,8 @@ describe("apply routes", () => {
 		const es = createEventStore(":memory:");
 		eventStore = es.store;
 		pool = es.pool;
-		recipientRepo = await SQLiteRecipientRepository(pool);
-		routes = createApplyRoutes(eventStore, pool, recipientRepo, hmacKey);
+		applicantRepo = await SQLiteApplicantRepository(pool);
+		routes = createApplyRoutes(eventStore, pool, applicantRepo, hmacKey);
 	});
 
 	afterEach(async () => {

@@ -1,7 +1,7 @@
 import { CommandHandler } from "@event-driven-io/emmett";
 import type { SQLiteEventStore } from "@event-driven-io/emmett-sqlite";
-import { createRecipient } from "../recipient/commandHandlers.ts";
-import type { RecipientRepository } from "../recipient/repository.ts";
+import { createApplicant } from "../applicant/commandHandlers.ts";
+import type { ApplicantRepository } from "../applicant/repository.ts";
 import { decide, evolve, initialState } from "./decider.ts";
 import { resolveIdentity } from "./resolveIdentity.ts";
 import type {
@@ -30,12 +30,12 @@ const handle = CommandHandler<
 export async function submitApplication(
 	form: ApplicationFormData,
 	eventStore: SQLiteEventStore,
-	recipientRepo: RecipientRepository,
+	applicantRepo: ApplicantRepository,
 ): Promise<{ streamId: string; events: ApplicationEvent[] }> {
 	const identityResolution = await resolveIdentity(
 		form.phone,
 		form.name,
-		recipientRepo,
+		applicantRepo,
 	);
 
 	const command: SubmitApplication = {
@@ -63,19 +63,16 @@ export async function submitApplication(
 
 	if (identityResolution.type === "new") {
 		try {
-			await createRecipient(
+			await createApplicant(
 				{
-					applicationId: form.applicationId,
 					phone: form.phone,
 					name: form.name,
 					email: form.email,
-					paymentPreference: form.paymentPreference,
-					meetingPlace: form.meetingPlace,
 				},
 				eventStore,
 			);
 		} catch {
-			// Recipient already exists (race condition) — safe to ignore
+			// Applicant already exists (race condition) — safe to ignore
 		}
 	}
 

@@ -2,6 +2,7 @@ import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
+import type { ApplicantRepository } from "../domain/applicant/repository.ts";
 import type { RecipientRepository } from "../domain/recipient/repository.ts";
 import type { VolunteerRepository } from "../domain/volunteer/repository.ts";
 import { SQLiteApplicationRepository } from "../infrastructure/application/sqliteApplicationRepository.ts";
@@ -38,6 +39,7 @@ export function startServer(
 	sessionStore: SessionStore,
 	volunteerRepo: VolunteerRepository,
 	recipientRepo: RecipientRepository,
+	applicantRepo: ApplicantRepository,
 	eventStore: SQLiteEventStore,
 	pool: ReturnType<typeof SQLiteConnectionPool>,
 	port = 3000,
@@ -49,7 +51,7 @@ export function startServer(
 	const applyRoutes = createApplyRoutes(
 		eventStore,
 		pool,
-		recipientRepo,
+		applicantRepo,
 		hmacKey,
 	);
 	const recipientRoutes = createRecipientRoutes(
@@ -61,7 +63,7 @@ export function startServer(
 	const appRepo = SQLiteApplicationRepository(pool);
 	const applicationRoutes = createApplicationRoutes(
 		appRepo,
-		recipientRepo,
+		applicantRepo,
 		eventStore,
 		pool,
 	);

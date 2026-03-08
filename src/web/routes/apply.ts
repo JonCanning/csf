@@ -3,11 +3,11 @@ import type {
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
 import { verifySolution } from "altcha-lib";
+import type { ApplicantRepository } from "../../domain/applicant/repository.ts";
 import { toApplicantId } from "../../domain/application/applicantId.ts";
 import { checkEligibility } from "../../domain/application/checkEligibility.ts";
 import { submitApplication } from "../../domain/application/submitApplication.ts";
 import type { PaymentPreference } from "../../domain/application/types.ts";
-import type { RecipientRepository } from "../../domain/recipient/repository.ts";
 import { applyClosedPage, applyPage, applyResultPage } from "../pages/apply.ts";
 
 function currentMonthCycle(): string {
@@ -37,7 +37,7 @@ async function isWindowOpen(
 export function createApplyRoutes(
 	eventStore: SQLiteEventStore,
 	pool: ReturnType<typeof SQLiteConnectionPool>,
-	recipientRepo: RecipientRepository,
+	applicantRepo: ApplicantRepository,
 	hmacKey: string,
 ) {
 	return {
@@ -76,7 +76,7 @@ export function createApplyRoutes(
 			const paymentPreference: PaymentPreference =
 				paymentPref === "bank" ? "bank" : "cash";
 			const monthCycle = currentMonthCycle();
-			const applicantId = toApplicantId(phone);
+			const applicantId = toApplicantId(phone, name);
 			const eligibility = await checkEligibility(applicantId, monthCycle, pool);
 
 			const applicationId = crypto.randomUUID();
@@ -92,7 +92,7 @@ export function createApplyRoutes(
 					eligibility,
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			const lastEvent = events[events.length - 1];

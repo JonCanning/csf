@@ -3,25 +3,25 @@ import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
+import type { ApplicantRepository } from "../../src/domain/applicant/repository.ts";
+import type { ApplicantEvent } from "../../src/domain/applicant/types.ts";
 import { toApplicantId } from "../../src/domain/application/applicantId.ts";
 import { checkEligibility } from "../../src/domain/application/checkEligibility.ts";
 import { reviewApplication } from "../../src/domain/application/reviewApplication.ts";
 import { submitApplication } from "../../src/domain/application/submitApplication.ts";
-import type { RecipientRepository } from "../../src/domain/recipient/repository.ts";
-import type { RecipientEvent } from "../../src/domain/recipient/types.ts";
+import { SQLiteApplicantRepository } from "../../src/infrastructure/applicant/sqliteApplicantRepository.ts";
 import { createEventStore } from "../../src/infrastructure/eventStore.ts";
-import { SQLiteRecipientRepository } from "../../src/infrastructure/recipient/sqliteRecipientRepository.ts";
 
 describe("submitApplication", () => {
 	let eventStore: SQLiteEventStore;
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
-	let recipientRepo: RecipientRepository;
+	let applicantRepo: ApplicantRepository;
 
 	beforeEach(async () => {
 		const es = createEventStore(":memory:");
 		eventStore = es.store;
 		pool = es.pool;
-		recipientRepo = await SQLiteRecipientRepository(pool);
+		applicantRepo = await SQLiteApplicantRepository(pool);
 	});
 
 	afterEach(async () => {
@@ -40,16 +40,18 @@ describe("submitApplication", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
 		expect(events).toHaveLength(2);
 		expect(events[0]!.type).toBe("ApplicationSubmitted");
 		expect(events[1]!.type).toBe("ApplicationAccepted");
-		expect(events[0]!.data.applicantId).toBe("applicant-07700900001");
+		expect(events[0]!.data.applicantId).toBe(
+			toApplicantId("07700900001", "Alice"),
+		);
 	});
 
-	test("new phone → creates recipient", async () => {
+	test("new phone → creates applicant", async () => {
 		await submitApplication(
 			{
 				applicationId: "app-1",
@@ -61,17 +63,19 @@ describe("submitApplication", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
-		const recipient = await recipientRepo.getByPhone("07700900001");
-		expect(recipient).not.toBeNull();
-		expect(recipient!.name).toBe("Alice");
-		expect(recipient!.paymentPreference).toBe("bank");
-		expect(recipient!.meetingPlace).toBe("Mill Road");
+		const applicant = await applicantRepo.getByPhoneAndName(
+			"07700900001",
+			"Alice",
+		);
+		expect(applicant).not.toBeNull();
+		expect(applicant!.name).toBe("Alice");
+		expect(applicant!.phone).toBe("07700900001");
 	});
 
-	test("new phone → RecipientCreated event includes applicationId", async () => {
+	test("new phone → ApplicantCreated event emitted", async () => {
 		await submitApplication(
 			{
 				applicationId: "app-1",
@@ -83,19 +87,18 @@ describe("submitApplication", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
-		const recipient = await recipientRepo.getByPhone("07700900001");
-		const { events } = await eventStore.readStream<RecipientEvent>(
-			`recipient-${recipient!.id}`,
+		const id = toApplicantId("07700900001", "Alice");
+		const { events } = await eventStore.readStream<ApplicantEvent>(
+			`applicant-${id}`,
 		);
-		const created = events.find((e) => e.type === "RecipientCreated");
+		const created = events.find((e) => e.type === "ApplicantCreated");
 		expect(created).toBeDefined();
-		expect(created!.data.applicationId).toBe("app-1");
 	});
 
-	test("known phone → does not create duplicate recipient", async () => {
+	test("known phone + same name → does not create duplicate applicant", async () => {
 		await submitApplication(
 			{
 				applicationId: "app-first",
@@ -107,7 +110,7 @@ describe("submitApplication", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
 		await submitApplication(
@@ -121,14 +124,14 @@ describe("submitApplication", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
-		const recipient = await recipientRepo.getByPhone("07700900001");
-		const { events } = await eventStore.readStream<RecipientEvent>(
-			`recipient-${recipient!.id}`,
+		const id = toApplicantId("07700900001", "Alice");
+		const { events } = await eventStore.readStream<ApplicantEvent>(
+			`applicant-${id}`,
 		);
-		const createdEvents = events.filter((e) => e.type === "RecipientCreated");
+		const createdEvents = events.filter((e) => e.type === "ApplicantCreated");
 		expect(createdEvents).toHaveLength(1);
 	});
 
@@ -144,7 +147,7 @@ describe("submitApplication", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
 		const { events } = await submitApplication(
@@ -158,11 +161,13 @@ describe("submitApplication", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
 		expect(events).toHaveLength(2);
-		expect(events[0]!.data.applicantId).toBe("applicant-07700900001");
+		expect(events[0]!.data.applicantId).toBe(
+			toApplicantId("07700900001", "Alice"),
+		);
 		expect(events[1]!.type).toBe("ApplicationAccepted");
 	});
 
@@ -178,7 +183,7 @@ describe("submitApplication", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
 		const { events } = await submitApplication(
@@ -192,14 +197,14 @@ describe("submitApplication", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
 		expect(events).toHaveLength(2);
 		expect(events[0]!.type).toBe("ApplicationSubmitted");
 		expect(events[1]!.type).toBe("ApplicationFlaggedForReview");
 		expect(events[1]!.data).toMatchObject({
-			applicantId: "applicant-07700900001",
+			applicantId: toApplicantId("07700900001", "Alice"),
 			reason: "Phone matches but name differs",
 		});
 	});
@@ -216,7 +221,7 @@ describe("submitApplication", () => {
 				eligibility: { status: "cooldown", lastGrantMonth: "2026-01" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
 		expect(events).toHaveLength(2);
@@ -239,7 +244,7 @@ describe("submitApplication", () => {
 				eligibility: { status: "duplicate" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
 		expect(events).toHaveLength(2);
@@ -250,7 +255,7 @@ describe("submitApplication", () => {
 	describe("application window gate", () => {
 		test("window not opened → checkEligibility returns window_closed", async () => {
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -259,7 +264,7 @@ describe("submitApplication", () => {
 
 		test("window not opened → Submitted + Rejected(window_closed)", async () => {
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -275,7 +280,7 @@ describe("submitApplication", () => {
 					eligibility,
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			expect(events).toHaveLength(2);
@@ -299,7 +304,7 @@ describe("submitApplication", () => {
 			]);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -327,7 +332,7 @@ describe("submitApplication", () => {
 			]);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -358,11 +363,11 @@ describe("submitApplication", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -379,7 +384,7 @@ describe("submitApplication", () => {
 					eligibility,
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			expect(events[1]!.type).toBe("ApplicationRejected");
@@ -408,11 +413,11 @@ describe("submitApplication", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -441,7 +446,7 @@ describe("submitApplication", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			// Simulate lottery selection
@@ -450,7 +455,7 @@ describe("submitApplication", () => {
 					type: "ApplicationSelected",
 					data: {
 						applicationId: "app-1",
-						applicantId: toApplicantId("07700900001"),
+						applicantId: toApplicantId("07700900001", "Alice"),
 						monthCycle: "2026-01",
 						rank: 1,
 						selectedAt: new Date().toISOString(),
@@ -459,7 +464,7 @@ describe("submitApplication", () => {
 			]);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -479,7 +484,7 @@ describe("submitApplication", () => {
 					eligibility,
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			expect(events[1]!.type).toBe("ApplicationRejected");
@@ -508,7 +513,7 @@ describe("submitApplication", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			// Select so cooldown would apply if within window
@@ -517,7 +522,7 @@ describe("submitApplication", () => {
 					type: "ApplicationSelected",
 					data: {
 						applicationId: "app-1",
-						applicantId: toApplicantId("07700900001"),
+						applicantId: toApplicantId("07700900001", "Alice"),
 						monthCycle: "2025-11",
 						rank: 1,
 						selectedAt: new Date().toISOString(),
@@ -526,7 +531,7 @@ describe("submitApplication", () => {
 			]);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -543,7 +548,7 @@ describe("submitApplication", () => {
 					eligibility,
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			expect(events[1]!.type).toBe("ApplicationAccepted");
@@ -571,11 +576,11 @@ describe("submitApplication", () => {
 					eligibility: { status: "duplicate" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -585,7 +590,7 @@ describe("submitApplication", () => {
 
 	describe("volunteer review of flagged application", () => {
 		async function submitFlagged() {
-			// First application creates the recipient
+			// First application creates the applicant
 			await submitApplication(
 				{
 					applicationId: "app-first",
@@ -597,7 +602,7 @@ describe("submitApplication", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			// Second application with different name → flagged
@@ -612,7 +617,7 @@ describe("submitApplication", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			expect(events[1]!.type).toBe("ApplicationFlaggedForReview");
@@ -633,7 +638,7 @@ describe("submitApplication", () => {
 			]);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-06",
 				pool,
 			);
@@ -650,7 +655,7 @@ describe("submitApplication", () => {
 			expect(events[0]!.type).toBe("ApplicationConfirmed");
 			expect(events[0]!.data).toMatchObject({
 				volunteerId: "vol-1",
-				applicantId: "applicant-07700900001",
+				applicantId: toApplicantId("07700900001", "Alice"),
 			});
 		});
 
@@ -673,7 +678,7 @@ describe("submitApplication", () => {
 					type: "ApplicationSelected",
 					data: {
 						applicationId: "app-first",
-						applicantId: toApplicantId("07700900001"),
+						applicantId: toApplicantId("07700900001", "Alice"),
 						monthCycle: "2026-01",
 						rank: 1,
 						selectedAt: new Date().toISOString(),
@@ -682,7 +687,7 @@ describe("submitApplication", () => {
 			]);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-03",
 				pool,
 			);
@@ -737,7 +742,7 @@ describe("submitApplication", () => {
 			]);
 
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001"),
+				toApplicantId("07700900001", "Alice"),
 				"2026-06",
 				pool,
 			);
@@ -771,7 +776,7 @@ describe("submitApplication", () => {
 					eligibility: { status: "eligible" },
 				},
 				eventStore,
-				recipientRepo,
+				applicantRepo,
 			);
 
 			await expect(
@@ -797,9 +802,9 @@ describe("submitApplication", () => {
 			eligibility: { status: "eligible" as const },
 		};
 
-		await submitApplication(form, eventStore, recipientRepo);
+		await submitApplication(form, eventStore, applicantRepo);
 		await expect(
-			submitApplication(form, eventStore, recipientRepo),
+			submitApplication(form, eventStore, applicantRepo),
 		).rejects.toThrow(/already submitted/i);
 	});
 });

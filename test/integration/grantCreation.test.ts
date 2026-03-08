@@ -4,6 +4,7 @@ import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
+import type { ApplicantRepository } from "../../src/domain/applicant/repository.ts";
 import { submitApplication } from "../../src/domain/application/submitApplication.ts";
 import type { ApplicationEvent } from "../../src/domain/application/types.ts";
 import { processApplicationSelected } from "../../src/domain/grant/processManager.ts";
@@ -15,20 +16,19 @@ import {
 } from "../../src/domain/lottery/decider.ts";
 import { processLotteryDrawn } from "../../src/domain/lottery/processManager.ts";
 import type { LotteryEvent } from "../../src/domain/lottery/types.ts";
-import type { RecipientRepository } from "../../src/domain/recipient/repository.ts";
+import { SQLiteApplicantRepository } from "../../src/infrastructure/applicant/sqliteApplicantRepository.ts";
 import { createEventStore } from "../../src/infrastructure/eventStore.ts";
-import { SQLiteRecipientRepository } from "../../src/infrastructure/recipient/sqliteRecipientRepository.ts";
 
 describe("grant creation end-to-end", () => {
 	let eventStore: SQLiteEventStore;
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
-	let recipientRepo: RecipientRepository;
+	let applicantRepo: ApplicantRepository;
 
 	beforeEach(async () => {
 		const es = createEventStore(":memory:");
 		eventStore = es.store;
 		pool = es.pool;
-		recipientRepo = await SQLiteRecipientRepository(pool);
+		applicantRepo = await SQLiteApplicantRepository(pool);
 	});
 
 	afterEach(async () => {
@@ -58,7 +58,7 @@ describe("grant creation end-to-end", () => {
 				eligibility: { status: "eligible" },
 			},
 			eventStore,
-			recipientRepo,
+			applicantRepo,
 		);
 
 		const handle = lotteryHandle();

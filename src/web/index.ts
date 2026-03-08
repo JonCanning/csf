@@ -1,3 +1,4 @@
+import { SQLiteApplicantRepository } from "../infrastructure/applicant/sqliteApplicantRepository.ts";
 import { createEventStore } from "../infrastructure/eventStore.ts";
 import { SQLiteRecipientRepository } from "../infrastructure/recipient/sqliteRecipientRepository.ts";
 import { SQLiteSessionStore } from "../infrastructure/session/sqliteSessionStore.ts";
@@ -10,11 +11,13 @@ const { store: eventStore, pool } = createEventStore(dbPath);
 const sessionStore = await SQLiteSessionStore(pool);
 const volunteerRepo = await SQLiteVolunteerRepository(pool);
 const recipientRepo = await SQLiteRecipientRepository(pool);
+const applicantRepo = await SQLiteApplicantRepository(pool);
 
 const server = startServer(
 	sessionStore,
 	volunteerRepo,
 	recipientRepo,
+	applicantRepo,
 	eventStore,
 	pool,
 );
