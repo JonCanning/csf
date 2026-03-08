@@ -72,6 +72,25 @@ describe("application routes", () => {
 			const html = await res.text();
 			expect(html).toContain("No applications");
 		});
+
+		test("filters applications by status", async () => {
+			await seedApp("app-1", "2026-03", "Alice", "07700900001");
+			await seedApp("app-2", "2026-03", "Bob", "07700900002");
+
+			const res = await routes.list("2026-03", { status: "accepted" });
+			const html = await res.text();
+			expect(html).toContain("Alice");
+			expect(html).toContain("Bob");
+		});
+
+		test("filters applications by payment preference", async () => {
+			await seedApp("app-1", "2026-03", "Alice", "07700900001");
+
+			const res = await routes.list("2026-03", { paymentPreference: "bank" });
+			const html = await res.text();
+			// app-1 was seeded with "cash", so filtering by "bank" should exclude it
+			expect(html).toContain("No applications");
+		});
 	});
 
 	describe("detail", () => {

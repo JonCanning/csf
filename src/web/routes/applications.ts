@@ -4,7 +4,10 @@ import type {
 } from "@event-driven-io/emmett-sqlite";
 import type { ApplicantRepository } from "../../domain/applicant/repository.ts";
 import { checkEligibility } from "../../domain/application/checkEligibility.ts";
-import type { ApplicationRepository } from "../../domain/application/repository.ts";
+import type {
+	ApplicationFilters,
+	ApplicationRepository,
+} from "../../domain/application/repository.ts";
 import { reviewApplication } from "../../domain/application/reviewApplication.ts";
 import { reviewPanel, viewPanel } from "../pages/applicationPanel.ts";
 import {
@@ -27,12 +30,15 @@ export function createApplicationRoutes(
 	pool: ReturnType<typeof SQLiteConnectionPool>,
 ) {
 	return {
-		async list(month?: string): Promise<Response> {
+		async list(
+			month?: string,
+			filters?: ApplicationFilters,
+		): Promise<Response> {
 			const months = await appRepo.listDistinctMonths();
 			const currentMonth = month ?? months[0] ?? currentMonthCycle();
-			const applications = await appRepo.listByMonth(currentMonth);
+			const applications = await appRepo.listByMonth(currentMonth, filters);
 			return new Response(
-				applicationsPage(applications, months, currentMonth),
+				applicationsPage(applications, months, currentMonth, filters),
 				{
 					headers: { "Content-Type": "text/html" },
 				},

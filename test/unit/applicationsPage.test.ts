@@ -49,4 +49,33 @@ describe("applicationsPage", () => {
 		expect(html).toContain("@get");
 		expect(html).toContain("/applications/app-1");
 	});
+
+	test("renders status filter dropdown", () => {
+		const html = applicationsPage([app], ["2026-03"], "2026-03");
+		expect(html).toContain("All Statuses");
+		expect(html).toContain("Applied");
+		expect(html).toContain("Flagged");
+		expect(html).toContain("Selected");
+	});
+
+	test("renders payment filter dropdown", () => {
+		const html = applicationsPage([app], ["2026-03"], "2026-03");
+		expect(html).toContain("All Payments");
+		expect(html).toContain("Bank");
+		expect(html).toContain("Cash");
+	});
+
+	test("preserves selected status filter", () => {
+		const html = applicationsPage([app], ["2026-03"], "2026-03", {
+			status: "accepted",
+		});
+		expect(html).toContain('"status": "accepted"');
+	});
+
+	test("preserves selected payment filter", () => {
+		const html = applicationsPage([app], ["2026-03"], "2026-03", {
+			paymentPreference: "bank",
+		});
+		expect(html).toContain('"payment": "bank"');
+	});
 });

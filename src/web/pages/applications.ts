@@ -1,4 +1,7 @@
-import type { ApplicationRow } from "../../domain/application/repository.ts";
+import type {
+	ApplicationFilters,
+	ApplicationRow,
+} from "../../domain/application/repository.ts";
 import { layout } from "./layout.ts";
 
 function escapeHtml(s: string): string {
@@ -61,11 +64,35 @@ export function applicationsTableBody(applications: ApplicationRow[]): string {
 	return `<tbody id="application-rows">${rows}</tbody>`;
 }
 
+const STATUS_OPTIONS = [
+	{ value: "all", label: "All Statuses" },
+	{ value: "applied", label: "Applied" },
+	{ value: "accepted", label: "Accepted" },
+	{ value: "flagged", label: "Flagged" },
+	{ value: "rejected", label: "Rejected" },
+	{ value: "selected", label: "Selected" },
+	{ value: "not_selected", label: "Not Selected" },
+];
+
+const PAYMENT_OPTIONS = [
+	{ value: "all", label: "All Payments" },
+	{ value: "bank", label: "Bank" },
+	{ value: "cash", label: "Cash" },
+];
+
+function filterUrl(): string {
+	return "'/applications?month=' + $month + '&status=' + $status + '&payment=' + $payment";
+}
+
 export function applicationsPage(
 	applications: ApplicationRow[],
 	months: string[],
 	currentMonth: string,
+	filters?: ApplicationFilters,
 ): string {
+	const currentStatus = filters?.status ?? "all";
+	const currentPayment = filters?.paymentPreference ?? "all";
+
 	const monthOptions = months
 		.map(
 			(m) =>
@@ -73,18 +100,42 @@ export function applicationsPage(
 		)
 		.join("\n");
 
-	const body = `<div class="max-w-5xl mx-auto px-4 py-8" data-signals='{"month": "${escapeHtml(currentMonth)}"}'>
+	const statusOptions = STATUS_OPTIONS.map(
+		(o) =>
+			`<option value="${o.value}"${o.value === currentStatus ? " selected" : ""}>${o.label}</option>`,
+	).join("\n");
+
+	const paymentOptions = PAYMENT_OPTIONS.map(
+		(o) =>
+			`<option value="${o.value}"${o.value === currentPayment ? " selected" : ""}>${o.label}</option>`,
+	).join("\n");
+
+	const body = `<div class="max-w-5xl mx-auto px-4 py-8" data-signals='{"month": "${escapeHtml(currentMonth)}", "status": "${escapeHtml(currentStatus)}", "payment": "${escapeHtml(currentPayment)}"}'>
 	<div class="flex items-center justify-between mb-6">
 		<div class="flex items-center gap-3">
 			<a href="/" class="text-bark-muted hover:text-bark transition-colors text-sm">&larr; Back</a>
 			<h1 class="font-heading text-2xl font-semibold text-bark">Applications</h1>
 		</div>
-		<select
-			data-bind-month
-			data-on-change="@get('/applications?month=' + $month)"
-			class="input max-w-48 bg-white text-sm">
-			${monthOptions}
-		</select>
+		<div class="flex items-center gap-2">
+			<select
+				data-bind-month
+				data-on-change="@get(${filterUrl()})"
+				class="input max-w-48 bg-white text-sm">
+				${monthOptions}
+			</select>
+			<select
+				data-bind-status
+				data-on-change="@get(${filterUrl()})"
+				class="input max-w-48 bg-white text-sm">
+				${statusOptions}
+			</select>
+			<select
+				data-bind-payment
+				data-on-change="@get(${filterUrl()})"
+				class="input max-w-48 bg-white text-sm">
+				${paymentOptions}
+			</select>
+		</div>
 	</div>
 
 	<div class="card">

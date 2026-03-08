@@ -1,5 +1,6 @@
 import type { SQLiteConnectionPool } from "@event-driven-io/emmett-sqlite";
 import type {
+	ApplicationFilters,
 	ApplicationRepository,
 	ApplicationRow,
 } from "../../domain/application/repository.ts";
@@ -61,13 +62,26 @@ export function SQLiteApplicationRepository(
 			}
 		},
 
-		async listByMonth(monthCycle: string): Promise<ApplicationRow[]> {
+		async listByMonth(
+			monthCycle: string,
+			filters?: ApplicationFilters,
+		): Promise<ApplicationRow[]> {
 			try {
 				return await pool.withConnection(async (conn) => {
-					const rows = await conn.query<DbRow>(
-						"SELECT * FROM applications WHERE month_cycle = ? ORDER BY applied_at DESC",
-						[monthCycle],
-					);
+					const conditions = ["month_cycle = ?"];
+					const params: unknown[] = [monthCycle];
+
+					if (filters?.status) {
+						conditions.push("status = ?");
+						params.push(filters.status);
+					}
+					if (filters?.paymentPreference) {
+						conditions.push("payment_preference = ?");
+						params.push(filters.paymentPreference);
+					}
+
+					const sql = `SELECT * FROM applications WHERE ${conditions.join(" AND ")} ORDER BY applied_at DESC`;
+					const rows = await conn.query<DbRow>(sql, params);
 					return rows.map(rowToApplication);
 				});
 			} catch (err) {

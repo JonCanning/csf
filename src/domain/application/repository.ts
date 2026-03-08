@@ -14,8 +14,16 @@ export type ApplicationRow = {
 	rejectedAt: string | null;
 };
 
+export type ApplicationFilters = {
+	status?: string;
+	paymentPreference?: string;
+};
+
 export interface ApplicationRepository {
 	getById(id: string): Promise<ApplicationRow | null>;
-	listByMonth(monthCycle: string): Promise<ApplicationRow[]>;
+	listByMonth(
+		monthCycle: string,
+		filters?: ApplicationFilters,
+	): Promise<ApplicationRow[]>;
 	listDistinctMonths(): Promise<string[]>;
 }

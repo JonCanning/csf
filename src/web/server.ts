@@ -167,8 +167,15 @@ export function startServer(
 					const volunteer = await requireAuth(req);
 					if (!volunteer) return Response.redirect("/login", 302);
 					const url = new URL(req.url);
+					const status = url.searchParams.get("status") ?? undefined;
+					const payment = url.searchParams.get("payment") ?? undefined;
 					return applicationRoutes.list(
 						url.searchParams.get("month") ?? undefined,
+						{
+							status: status && status !== "all" ? status : undefined,
+							paymentPreference:
+								payment && payment !== "all" ? payment : undefined,
+						},
 					);
 				},
 			},
