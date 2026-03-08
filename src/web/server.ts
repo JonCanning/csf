@@ -86,6 +86,14 @@ export function startServer(
 			"/api/altcha/challenge": {
 				GET: () => altchaRoutes.challenge(),
 			},
+			"/scripts/altcha.js": {
+				GET: async () => {
+					const file = Bun.file("node_modules/altcha/dist/altcha.js");
+					return new Response(file, {
+						headers: { "Content-Type": "application/javascript" },
+					});
+				},
+			},
 			"/styles/app.css": {
 				GET: async () => {
 					const file = Bun.file("src/web/styles/dist/app.css");

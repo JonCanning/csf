@@ -25,13 +25,15 @@ describe("apply routes", () => {
 			challenge.maxnumber,
 		);
 		const solution = await solver.promise;
-		return btoa(JSON.stringify({
-			algorithm: challenge.algorithm,
-			challenge: challenge.challenge,
-			number: solution.number,
-			salt: challenge.salt,
-			signature: challenge.signature,
-		}));
+		return btoa(
+			JSON.stringify({
+				algorithm: challenge.algorithm,
+				challenge: challenge.challenge,
+				number: solution.number,
+				salt: challenge.salt,
+				signature: challenge.signature,
+			}),
+		);
 	}
 
 	beforeEach(async () => {
@@ -148,11 +150,13 @@ describe("apply routes", () => {
 		});
 
 		test("returns 400 when name is missing", async () => {
+			const altchaToken = await generateAltchaToken();
 			const form = new URLSearchParams({
 				phone: "07700900001",
 				meetingPlace: "Mill Road",
 				paymentPreference: "cash",
 			});
+			form.set("altcha", altchaToken);
 
 			const req = new Request("http://localhost/apply", {
 				method: "POST",
