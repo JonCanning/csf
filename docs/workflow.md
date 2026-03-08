@@ -132,7 +132,7 @@ flowchart TD
 ### Automated (implemented)
 - Identity resolution (phone + name matching)
 - Eligibility checks (window status, cooldown, duplicates)
-- Recipient profile creation on first application
+- Applicant profile creation on first application
 - Lottery draw (seeded RNG, deterministic, auditable)
 - Selection fan-out (process manager dispatches to application streams)
 - Grant creation from lottery selection (process manager)
@@ -185,13 +185,13 @@ flowchart TD
 | `ApplicationAccepted` | Eligibility passed | Add to lottery pool |
 | `ApplicationRejected` | Cooldown/duplicate/identity_mismatch/window_closed | Notify applicant with reason |
 
-### Recipient Aggregate (implemented)
+### Applicant Aggregate (implemented)
 
 | Event | Trigger | What Happens |
 |-------|---------|--------------|
-| `RecipientCreated` | New applicant submits form | Create recipient profile with phone, name, payment preference |
-| `RecipientUpdated` | Volunteer updates recipient details | Update profile fields |
-| `RecipientDeleted` | Volunteer removes recipient | Soft-delete from read model |
+| `ApplicantCreated` | New applicant submits form | Create applicant profile with phone, name, email |
+| `ApplicantUpdated` | Volunteer updates applicant details | Update profile fields |
+| `ApplicantDeleted` | Volunteer removes applicant | Soft-delete from read model |
 
 ### Volunteer Aggregate (implemented)
 
