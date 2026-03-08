@@ -3,6 +3,7 @@ import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
+import { createChallenge, solveChallenge } from "altcha-lib";
 import type { RecipientRepository } from "../../src/domain/recipient/repository.ts";
 import { createEventStore } from "../../src/infrastructure/eventStore.ts";
 import { SQLiteRecipientRepository } from "../../src/infrastructure/recipient/sqliteRecipientRepository.ts";
@@ -13,13 +14,32 @@ describe("apply routes", () => {
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
 	let recipientRepo: RecipientRepository;
 	let routes: ReturnType<typeof createApplyRoutes>;
+	const hmacKey = "test-hmac-key";
+
+	async function generateAltchaToken(): Promise<string> {
+		const challenge = await createChallenge({ hmacKey, maxNumber: 10 });
+		const solver = solveChallenge(
+			challenge.challenge,
+			challenge.salt,
+			challenge.algorithm,
+			challenge.maxnumber,
+		);
+		const solution = await solver.promise;
+		return btoa(JSON.stringify({
+			algorithm: challenge.algorithm,
+			challenge: challenge.challenge,
+			number: solution.number,
+			salt: challenge.salt,
+			signature: challenge.signature,
+		}));
+	}
 
 	beforeEach(async () => {
 		const es = createEventStore(":memory:");
 		eventStore = es.store;
 		pool = es.pool;
 		recipientRepo = await SQLiteRecipientRepository(pool);
-		routes = createApplyRoutes(eventStore, pool, recipientRepo);
+		routes = createApplyRoutes(eventStore, pool, recipientRepo, hmacKey);
 	});
 
 	afterEach(async () => {
@@ -47,7 +67,7 @@ describe("apply routes", () => {
 	});
 
 	describe("handleSubmit", () => {
-		test("redirects to result with accepted status", async () => {
+		test("returns 400 when altcha token is missing", async () => {
 			await eventStore.appendToStream("lottery-2026-03", [
 				{
 					type: "ApplicationWindowOpened",
@@ -69,6 +89,35 @@ describe("apply routes", () => {
 			});
 
 			const res = await routes.handleSubmit(req);
+			expect(res.status).toBe(400);
+			const text = await res.text();
+			expect(text).toContain("verification");
+		});
+
+		test("redirects to result with accepted status", async () => {
+			await eventStore.appendToStream("lottery-2026-03", [
+				{
+					type: "ApplicationWindowOpened",
+					data: { monthCycle: "2026-03", openedAt: "2026-03-01T00:00:00Z" },
+				},
+			]);
+
+			const altchaToken = await generateAltchaToken();
+			const form = new URLSearchParams({
+				name: "Alice",
+				phone: "07700900001",
+				meetingPlace: "Mill Road",
+				paymentPreference: "cash",
+			});
+			form.set("altcha", altchaToken);
+
+			const req = new Request("http://localhost/apply", {
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: form.toString(),
+			});
+
+			const res = await routes.handleSubmit(req);
 			expect(res.status).toBe(302);
 			const location = res.headers.get("Location");
 			expect(location).toContain("/apply/result");
@@ -76,12 +125,14 @@ describe("apply routes", () => {
 		});
 
 		test("redirects with rejected status when window closed", async () => {
+			const altchaToken = await generateAltchaToken();
 			const form = new URLSearchParams({
 				name: "Alice",
 				phone: "07700900001",
 				meetingPlace: "Mill Road",
 				paymentPreference: "cash",
 			});
+			form.set("altcha", altchaToken);
 
 			const req = new Request("http://localhost/apply", {
 				method: "POST",

@@ -1,3 +1,4 @@
+import { verifySolution } from "altcha-lib";
 import type {
 	SQLiteConnectionPool,
 	SQLiteEventStore,
@@ -37,6 +38,7 @@ export function createApplyRoutes(
 	eventStore: SQLiteEventStore,
 	pool: ReturnType<typeof SQLiteConnectionPool>,
 	recipientRepo: RecipientRepository,
+	hmacKey: string,
 ) {
 	return {
 		async showForm(): Promise<Response> {
@@ -55,6 +57,15 @@ export function createApplyRoutes(
 			const email = String(formData.get("email") ?? "").trim() || undefined;
 			const meetingPlace = String(formData.get("meetingPlace") ?? "").trim();
 			const paymentPref = String(formData.get("paymentPreference") ?? "cash");
+
+			const altcha = String(formData.get("altcha") ?? "");
+			if (!altcha) {
+				return new Response("Bot verification failed", { status: 400 });
+			}
+			const verified = await verifySolution(altcha, hmacKey);
+			if (!verified) {
+				return new Response("Bot verification failed", { status: 400 });
+			}
 
 			if (!name || !phone || !meetingPlace) {
 				return new Response("Name, phone, and meeting place are required", {
