@@ -20,6 +20,8 @@
 		"@event-driven-io/emmett-sqlite": "^0.42.0",
 		"@starfederation/datastar-sdk": "^1.0.0-RC.3",
 		"@tailwindcss/cli": "^4.2.1",
+		"altcha": "^2.3.0",
+		"altcha-lib": "^1.4.1",
 		"tailwindcss": "^4.2.1"
 	}
 }
