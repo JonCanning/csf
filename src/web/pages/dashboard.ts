@@ -1,3 +1,4 @@
+import { getFundName } from "../../config.ts";
 import type { Volunteer } from "../../domain/volunteer/types.ts";
 import { layout } from "./layout.ts";
 
@@ -7,7 +8,7 @@ export function dashboardPage(volunteer: Volunteer): string {
 		`
 	<div class="max-w-2xl mx-auto px-4 py-8">
 		<div class="flex items-center justify-between mb-8">
-			<h1 class="font-heading font-bold text-2xl">Community Support Fund</h1>
+			<h1 class="font-heading font-bold text-2xl">${escapeHtml(getFundName())}</h1>
 			<a href="/logout" class="btn btn-secondary no-underline text-bark-muted">
 				Sign Out
 			</a>

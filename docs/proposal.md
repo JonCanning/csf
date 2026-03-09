@@ -1,10 +1,10 @@
-# Cambridge Solidarity Fund — Grant Lottery System
+# Grant Lottery System
 
 **Proposal for volunteer approval — March 2026**
 
 ## Summary
 
-We're moving from manually awarding £40 grants to a **lottery-based system**: anyone applies during a limited window, winners are randomly drawn at month end, limited by available Open Collective funds.
+We're moving from manually awarding £40 grants to a **lottery-based system**: anyone applies during a limited window, winners are randomly drawn at month end, limited by available funds.
 
 ---
 

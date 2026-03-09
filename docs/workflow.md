@@ -1,10 +1,10 @@
-# Cambridge Solidarity Fund — Grant Lottery System
+# Grant Lottery System
 
 **Proposal for volunteer approval — March 2026**
 
 ## Summary
 
-We're moving from manually awarding £40 grants to a **lottery-based system**: anyone applies during a limited window, winners are randomly drawn at month end, limited by available Open Collective funds.
+We're moving from manually awarding £40 grants to a **lottery-based system**: anyone applies during a limited window, winners are randomly drawn at month end, limited by available funds.
 
 ---
 
@@ -73,7 +73,7 @@ flowchart TD
 
         CASH_MEET --> CASH_DONE([Cash handed<br/>over in person])
         CASH_DONE --> CASH_PAID["✅ GrantPaid (cash)<br/>awaiting_reimbursement"]
-        CASH_PAID --> REIMBURSE["Volunteer submits<br/>OC expense reference"]
+        CASH_PAID --> REIMBURSE["Volunteer submits<br/>expense reference"]
         REIMBURSE --> REIMBURSED["✅ VolunteerReimbursed<br/>Grant complete"]
 
         CLEARED --> PAY["💸 Pay £40<br/>(bank transfer)"]
@@ -150,11 +150,11 @@ flowchart TD
 - Resolve identity mismatches (review flagged applications)
 - Open application window (manual, starts acceptance for the month)
 - Close application window (manual, ends acceptance for the month)
-- Trigger lottery draw (manual, after entering OC balance)
+- Trigger lottery draw (manual, after entering fund balance)
 - Verify proof of address uploads (approve/reject)
 - Assign volunteer to grant
 - Record payment (bank transfer or cash handover)
-- Record reimbursement (volunteer logs OC expense reference after cash handover)
+- Record reimbursement (volunteer logs expense reference after cash handover)
 - Release slot for unresponsive winners
 
 ### Volunteer Actions (not yet implemented)
@@ -242,7 +242,7 @@ Applicant holds identity only (phone, name, email). Per-application choices (pay
 | `AcceptCashAlternative` | Applicant | offered_cash_alternative | Accepts cash; routes to cash handover |
 | `DeclineCashAlternative` | Applicant | offered_cash_alternative | Declines cash; slot released |
 | `RecordPayment` | Volunteer | poa_approved (bank only), awaiting_cash_handover (cash only) | Records payment; bank grants complete, cash grants await reimbursement |
-| `RecordReimbursement` | Volunteer | awaiting_reimbursement | Records OC expense reference; cash grant fully complete |
+| `RecordReimbursement` | Volunteer | awaiting_reimbursement | Records expense reference; cash grant fully complete |
 | `ReleaseSlot` | Volunteer | any non-terminal | Manually releases slot (unresponsive, no-show, etc.) |
 
 #### Events
@@ -258,7 +258,7 @@ Applicant holds identity only (phone, name, email). Per-application choices (pay
 | `CashAlternativeAccepted` | Applicant accepts cash | Route to cash handover flow |
 | `CashAlternativeDeclined` | Applicant declines cash | Slot released |
 | `GrantPaid` | Transfer sent or cash handed over | Bank grants complete; cash grants move to awaiting_reimbursement |
-| `VolunteerReimbursed` | Volunteer records OC expense | Cash grant fully complete |
+| `VolunteerReimbursed` | Volunteer records expense | Cash grant fully complete |
 | `SlotReleased` | Volunteer releases / cash declined | Release slot to waitlist |
 
 #### State Machine
@@ -310,7 +310,7 @@ stateDiagram-v2
 | Web form | Application intake |
 | Document storage | Proof of address uploads |
 
-> **Note:** Open Collective balance queries are not automated — volunteers manually provide the fund balance and enter OC expense references when recording reimbursements.
+> **Note:** Fund balance queries are not automated — volunteers manually provide the fund balance and enter expense references when recording reimbursements.
 
 ---
 

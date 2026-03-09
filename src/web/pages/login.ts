@@ -1,3 +1,4 @@
+import { getFundName } from "../../config.ts";
 import { layout } from "./layout.ts";
 
 export function loginPage(error?: string): string {
@@ -10,7 +11,7 @@ export function loginPage(error?: string): string {
 		`
 	<div class="flex items-center justify-center min-h-screen p-4">
 		<div class="card bg-cream-50 p-10 w-full max-w-sm animate-fade-in">
-			<h1 class="font-heading font-bold text-2xl text-bark mb-1">Community Support Fund</h1>
+			<h1 class="font-heading font-bold text-2xl text-bark mb-1">${escapeHtml(getFundName())}</h1>
 			<p class="text-bark-muted text-sm mb-8">Volunteer Portal</p>
 
 			<form method="POST" action="/login">

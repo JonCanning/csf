@@ -1,6 +1,6 @@
-# Cambridge Solidarity Fund
+# Solidarity Fund
 
-A grant lottery system for distributing monthly grants to people in need. Applications are collected during a limited window, then winners are randomly drawn at month end, funded by Open Collective.
+A grant lottery system for distributing monthly grants to people in need. Applications are collected during a limited window, then winners are randomly drawn at month end.
 
 ## How it works
 
