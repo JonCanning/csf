@@ -90,6 +90,21 @@ export function SQLiteGrantRepository(
 			}
 		},
 
+		async getByApplicationId(applicationId: string): Promise<GrantRow | null> {
+			try {
+				return await pool.withConnection(async (conn) => {
+					const rows = await conn.query<DbRow>(
+						`${SELECT_GRANTS} WHERE g.application_id = ? LIMIT 1`,
+						[applicationId],
+					);
+					return rows.length > 0 ? rowToGrant(rows[0]!) : null;
+				});
+			} catch (err) {
+				if (isNoSuchTable(err)) return null;
+				throw err;
+			}
+		},
+
 		async listByMonth(monthCycle: string): Promise<GrantRow[]> {
 			try {
 				return await pool.withConnection(async (conn) => {
