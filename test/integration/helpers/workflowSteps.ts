@@ -241,6 +241,9 @@ export async function queryGrant(env: TestEnv, id: string) {
 			rank: number;
 			status: string;
 			payment_preference: string;
+			sort_code: string | null;
+			account_number: string | null;
+			poa_ref: string | null;
 			volunteer_id: string | null;
 			poa_attempts: number;
 			amount: number | null;

@@ -67,6 +67,18 @@ function commonFields(grant: GrantRow): string {
 	return fields.join("\n");
 }
 
+function bankDetailFields(grant: GrantRow): string {
+	if (!grant.sortCode && !grant.accountNumber) return "";
+	return [
+		grant.sortCode ? field("Sort Code", escapeHtml(grant.sortCode)) : "",
+		grant.accountNumber
+			? field("Account Number", escapeHtml(grant.accountNumber))
+			: "",
+	]
+		.filter(Boolean)
+		.join("\n");
+}
+
 function assignVolunteerForm(grant: GrantRow, volunteers: Volunteer[]): string {
 	const options = volunteers
 		.filter((v) => !v.isDisabled)
@@ -104,27 +116,31 @@ function releaseSlotForm(grant: GrantRow): string {
 	</div>`;
 }
 
-function bankDetailsForm(grant: GrantRow): string {
+function editBankDetailsForm(grant: GrantRow): string {
+	const signals = escapeHtml(
+		JSON.stringify({
+			editsortcode: grant.sortCode ?? "",
+			editaccountnumber: grant.accountNumber ?? "",
+		}),
+	);
 	return `<div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-		<h3 class="font-heading font-semibold text-sm mb-3">Submit Bank Details</h3>
-		<form method="post" action="/grants/${encodeURIComponent(grant.id)}/submit-bank-details"
-			enctype="multipart/form-data">
-			<div class="space-y-2">
+		<h3 class="font-heading font-semibold text-sm mb-3">Edit Bank Details</h3>
+		<div data-signals='${signals}'>
+			<div class="space-y-2 mb-2">
 				<div>
 					<label class="label">Sort Code</label>
-					<input type="text" name="sortCode" class="input text-sm" placeholder="12-34-56" />
+					<input type="text" data-bind-editsortcode class="input text-sm" placeholder="12-34-56" />
 				</div>
 				<div>
 					<label class="label">Account Number</label>
-					<input type="text" name="accountNumber" class="input text-sm" placeholder="12345678" />
+					<input type="text" data-bind-editaccountnumber class="input text-sm" placeholder="12345678" />
 				</div>
-				<div>
-					<label class="label">Proof of Address</label>
-					<input type="file" name="poa" accept="image/*,.pdf" class="input text-sm" />
-				</div>
-				<button type="submit" class="btn btn-primary text-sm w-full">Submit</button>
 			</div>
-		</form>
+			<button class="btn btn-primary text-sm w-full"
+				data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/update-bank-details?sortCode=' + $editsortcode + '&accountNumber=' + $editaccountnumber)">
+				Save
+			</button>
+		</div>
 	</div>`;
 }
 
@@ -234,9 +250,11 @@ export function grantPanel(
 	let actions = "";
 
 	switch (grant.status) {
-		case "awaiting_bank_details":
+		case "awaiting_review":
 			actions = [
-				bankDetailsForm(grant),
+				bankDetailFields(grant),
+				poaReviewSection(grant, hasDocument),
+				editBankDetailsForm(grant),
 				assignVolunteerForm(grant, volunteers),
 				releaseSlotForm(grant),
 			].join("\n");
@@ -245,14 +263,6 @@ export function grantPanel(
 		case "awaiting_cash_handover":
 			actions = [
 				recordPaymentForm(grant, "cash"),
-				assignVolunteerForm(grant, volunteers),
-				releaseSlotForm(grant),
-			].join("\n");
-			break;
-
-		case "bank_details_submitted":
-			actions = [
-				poaReviewSection(grant, hasDocument),
 				assignVolunteerForm(grant, volunteers),
 				releaseSlotForm(grant),
 			].join("\n");
@@ -268,6 +278,7 @@ export function grantPanel(
 
 		case "poa_approved":
 			actions = [
+				bankDetailFields(grant),
 				recordPaymentForm(grant, "bank"),
 				assignVolunteerForm(grant, volunteers),
 				releaseSlotForm(grant),

@@ -12,6 +12,9 @@ type DbRow = {
 	rank: number;
 	status: string;
 	payment_preference: string;
+	sort_code: string | null;
+	account_number: string | null;
+	poa_ref: string | null;
 	volunteer_id: string | null;
 	volunteer_name: string | null;
 	applicant_name: string | null;
@@ -42,6 +45,9 @@ function rowToGrant(row: DbRow): GrantRow {
 		rank: row.rank,
 		status: row.status,
 		paymentPreference: row.payment_preference,
+		sortCode: row.sort_code,
+		accountNumber: row.account_number,
+		proofOfAddressRef: row.poa_ref,
 		volunteerId: row.volunteer_id,
 		volunteerName: row.volunteer_name,
 		applicantName: row.applicant_name,

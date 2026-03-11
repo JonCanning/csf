@@ -10,8 +10,11 @@ function makeGrant(overrides: Partial<GrantRow> = {}): GrantRow {
 		applicantId: "a1",
 		monthCycle: "2026-03",
 		rank: 1,
-		status: "awaiting_bank_details",
+		status: "awaiting_review",
 		paymentPreference: "bank",
+		sortCode: "12-34-56",
+		accountNumber: "12345678",
+		proofOfAddressRef: "poa-ref-1",
 		volunteerId: null,
 		volunteerName: null,
 		applicantName: "Alice Smith",
@@ -49,7 +52,7 @@ describe("grantsPage", () => {
 
 	test("renders grant cards in correct columns", () => {
 		const grants = [
-			makeGrant({ id: "g1", status: "awaiting_bank_details" }),
+			makeGrant({ id: "g1", status: "awaiting_review" }),
 			makeGrant({ id: "g2", status: "paid", applicantName: "Bob" }),
 		];
 		const html = grantsBoard(grants);
@@ -93,43 +96,35 @@ describe("grantPanel", () => {
 		},
 	];
 
-	test("awaiting_bank_details shows bank details form", () => {
-		const grant = makeGrant({ status: "awaiting_bank_details" });
-		const html = grantPanel(grant, volunteers, false);
-		expect(html).toContain("Submit Bank Details");
-		expect(html).toContain("Sort Code");
-		expect(html).toContain("Account Number");
-		expect(html).toContain("Proof of Address");
+	test("awaiting_review shows bank details, POA review, and edit form", () => {
+		const grant = makeGrant({ status: "awaiting_review", poaAttempts: 1 });
+		const html = grantPanel(grant, volunteers, true);
+		expect(html).toContain("12-34-56");
+		expect(html).toContain("12345678");
+		expect(html).toContain("Approve POA");
+		expect(html).toContain("Reject POA");
+		expect(html).toContain("View Document");
+		expect(html).toContain("POA attempts: 1");
+		expect(html).toContain("Edit Bank Details");
 	});
 
-	test("awaiting_bank_details shows assign volunteer form", () => {
-		const grant = makeGrant({ status: "awaiting_bank_details" });
+	test("awaiting_review shows assign volunteer form", () => {
+		const grant = makeGrant({ status: "awaiting_review" });
 		const html = grantPanel(grant, volunteers, false);
 		expect(html).toContain("Assign Volunteer");
 		expect(html).toContain("Bob Volunteer");
 	});
 
-	test("awaiting_bank_details shows release slot form", () => {
-		const grant = makeGrant({ status: "awaiting_bank_details" });
+	test("awaiting_review shows release slot form", () => {
+		const grant = makeGrant({ status: "awaiting_review" });
 		const html = grantPanel(grant, volunteers, false);
 		expect(html).toContain("Release Slot");
 	});
 
-	test("bank_details_submitted shows POA review actions", () => {
-		const grant = makeGrant({
-			status: "bank_details_submitted",
-			poaAttempts: 1,
-		});
-		const html = grantPanel(grant, volunteers, true);
-		expect(html).toContain("Approve POA");
-		expect(html).toContain("Reject POA");
-		expect(html).toContain("View Document");
-		expect(html).toContain("POA attempts: 1");
-	});
-
-	test("poa_approved shows record payment form with bank method", () => {
+	test("poa_approved shows bank details and record payment form", () => {
 		const grant = makeGrant({ status: "poa_approved" });
 		const html = grantPanel(grant, volunteers, false);
+		expect(html).toContain("12-34-56");
 		expect(html).toContain("Record Payment");
 		expect(html).toContain("method=bank");
 	});

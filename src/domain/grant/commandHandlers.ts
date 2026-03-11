@@ -29,21 +29,17 @@ export async function assignVolunteer(
 	);
 }
 
-export async function submitBankDetails(
+export async function updateBankDetails(
 	grantId: string,
-	details: {
-		sortCode: string;
-		accountNumber: string;
-		proofOfAddressRef: string;
-	},
+	details: { sortCode: string; accountNumber: string },
 	eventStore: SQLiteEventStore,
 ): Promise<void> {
 	const now = new Date().toISOString();
 	await handle(eventStore, streamId(grantId), (state: GrantState) =>
 		decide(
 			{
-				type: "SubmitBankDetails",
-				data: { grantId, ...details, submittedAt: now },
+				type: "UpdateBankDetails",
+				data: { grantId, ...details, updatedAt: now },
 			},
 			state,
 		),

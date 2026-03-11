@@ -5,7 +5,7 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 	canHandle: [
 		"GrantCreated",
 		"VolunteerAssigned",
-		"BankDetailsSubmitted",
+		"BankDetailsUpdated",
 		"ProofOfAddressApproved",
 		"ProofOfAddressRejected",
 		"CashAlternativeOffered",
@@ -26,6 +26,9 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 				rank INTEGER NOT NULL,
 				status TEXT NOT NULL,
 				payment_preference TEXT NOT NULL,
+				sort_code TEXT,
+				account_number TEXT,
+				poa_ref TEXT,
 				volunteer_id TEXT,
 				poa_attempts INTEGER NOT NULL DEFAULT 0,
 				amount INTEGER,
@@ -48,11 +51,11 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 				case "GrantCreated": {
 					const status =
 						data.paymentPreference === "bank"
-							? "awaiting_bank_details"
+							? "awaiting_review"
 							: "awaiting_cash_handover";
 					await connection.command(
-						`INSERT OR IGNORE INTO grants (id, application_id, applicant_id, month_cycle, rank, status, payment_preference, created_at, updated_at)
-						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						`INSERT OR IGNORE INTO grants (id, application_id, applicant_id, month_cycle, rank, status, payment_preference, sort_code, account_number, poa_ref, created_at, updated_at)
+						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 						[
 							data.grantId,
 							data.applicationId,
@@ -61,6 +64,9 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 							data.rank,
 							status,
 							data.paymentPreference,
+							data.bankDetails?.sortCode ?? null,
+							data.bankDetails?.accountNumber ?? null,
+							data.bankDetails?.proofOfAddressRef ?? null,
 							data.createdAt,
 							data.createdAt,
 						],
@@ -73,10 +79,10 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 						[data.volunteerId, data.assignedAt, data.grantId],
 					);
 					break;
-				case "BankDetailsSubmitted":
+				case "BankDetailsUpdated":
 					await connection.command(
-						"UPDATE grants SET status = 'bank_details_submitted', poa_attempts = poa_attempts + 1, updated_at = ? WHERE id = ?",
-						[data.submittedAt, data.grantId],
+						"UPDATE grants SET sort_code = ?, account_number = ?, updated_at = ? WHERE id = ?",
+						[data.sortCode, data.accountNumber, data.updatedAt, data.grantId],
 					);
 					break;
 				case "ProofOfAddressApproved":
@@ -87,7 +93,7 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 					break;
 				case "ProofOfAddressRejected":
 					await connection.command(
-						"UPDATE grants SET status = 'awaiting_bank_details', updated_at = ? WHERE id = ?",
+						"UPDATE grants SET poa_attempts = poa_attempts + 1, updated_at = ? WHERE id = ?",
 						[data.rejectedAt, data.grantId],
 					);
 					break;

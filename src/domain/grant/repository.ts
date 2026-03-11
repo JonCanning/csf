@@ -6,6 +6,9 @@ export type GrantRow = {
 	rank: number;
 	status: string;
 	paymentPreference: string;
+	sortCode: string | null;
+	accountNumber: string | null;
+	proofOfAddressRef: string | null;
 	volunteerId: string | null;
 	volunteerName: string | null;
 	applicantName: string | null;

@@ -8,7 +8,7 @@ import {
 	recordReimbursement,
 	rejectProofOfAddress,
 	releaseSlot,
-	submitBankDetails,
+	updateBankDetails,
 } from "../../domain/grant/commandHandlers.ts";
 import type { GrantRepository } from "../../domain/grant/repository.ts";
 import type { VolunteerRepository } from "../../domain/volunteer/repository.ts";
@@ -81,37 +81,15 @@ export function createGrantRoutes(
 			return refreshGrantResponse(grantId);
 		},
 
-		async handleSubmitBankDetails(
+		async handleUpdateBankDetails(
 			grantId: string,
 			req: Request,
 		): Promise<Response> {
-			const formData = await req.formData();
-			const sortCode = formData.get("sortCode")?.toString() ?? "";
-			const accountNumber = formData.get("accountNumber")?.toString() ?? "";
-			const poaFile = formData.get("poa") as File | null;
-
-			let proofOfAddressRef = "";
-			if (poaFile && poaFile.size > 0) {
-				const docId = crypto.randomUUID();
-				const buffer = Buffer.from(await poaFile.arrayBuffer());
-				await docStore.store({
-					id: docId,
-					entityId: grantId,
-					type: "proof_of_address",
-					data: buffer,
-					mimeType: poaFile.type,
-				});
-				proofOfAddressRef = docId;
-			}
-
-			await submitBankDetails(
-				grantId,
-				{ sortCode, accountNumber, proofOfAddressRef },
-				eventStore,
-			);
-
-			// Regular form POST — redirect back to grants page
-			return Response.redirect("/grants", 303);
+			const url = new URL(req.url);
+			const sortCode = url.searchParams.get("sortCode") ?? "";
+			const accountNumber = url.searchParams.get("accountNumber") ?? "";
+			await updateBankDetails(grantId, { sortCode, accountNumber }, eventStore);
+			return refreshGrantResponse(grantId);
 		},
 
 		async handleApprovePoa(

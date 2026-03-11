@@ -12,7 +12,7 @@ import type {
 	RecordReimbursement,
 	RejectProofOfAddress,
 	ReleaseSlot,
-	SubmitBankDetails,
+	UpdateBankDetails,
 } from "./types.ts";
 
 export const initialState = (): GrantState => ({ status: "initial" });
@@ -23,8 +23,8 @@ export function decide(command: GrantCommand, state: GrantState): GrantEvent[] {
 			return decideCreate(command, state);
 		case "AssignVolunteer":
 			return decideAssignVolunteer(command, state);
-		case "SubmitBankDetails":
-			return decideSubmitBankDetails(command, state);
+		case "UpdateBankDetails":
+			return decideUpdateBankDetails(command, state);
 		case "ApproveProofOfAddress":
 			return decideApprovePoA(command, state);
 		case "RejectProofOfAddress":
@@ -48,40 +48,12 @@ function decideCreate(command: CreateGrant, state: GrantState): GrantEvent[] {
 			`Grant already created (status: ${state.status})`,
 		);
 	}
-
-	const { grantId, createdAt, bankDetails } = command.data;
-	const events: GrantEvent[] = [
-		{ type: "GrantCreated", data: { ...command.data } },
-	];
-
-	if (command.data.paymentPreference === "bank" && bankDetails) {
-		events.push({
-			type: "BankDetailsSubmitted",
-			data: {
-				grantId,
-				sortCode: bankDetails.sortCode,
-				accountNumber: bankDetails.accountNumber,
-				proofOfAddressRef: bankDetails.proofOfAddressRef,
-				submittedAt: createdAt,
-			},
-		});
-		events.push({
-			type: "ProofOfAddressApproved",
-			data: {
-				grantId,
-				verifiedBy: "system",
-				verifiedAt: createdAt,
-			},
-		});
-	}
-
-	return events;
+	return [{ type: "GrantCreated", data: { ...command.data } }];
 }
 
 function isNonTerminal(state: GrantState): state is GrantState & {
 	status:
-		| "awaiting_bank_details"
-		| "bank_details_submitted"
+		| "awaiting_review"
 		| "poa_approved"
 		| "offered_cash_alternative"
 		| "awaiting_cash_handover";
@@ -112,18 +84,18 @@ function decideAssignVolunteer(
 	];
 }
 
-function decideSubmitBankDetails(
-	command: SubmitBankDetails,
+function decideUpdateBankDetails(
+	command: UpdateBankDetails,
 	state: GrantState,
 ): GrantEvent[] {
-	if (state.status !== "awaiting_bank_details") {
+	if (state.status !== "awaiting_review") {
 		throw new IllegalStateError(
-			`Cannot submit bank details in ${state.status} state`,
+			`Cannot update bank details in ${state.status} state`,
 		);
 	}
 	return [
 		{
-			type: "BankDetailsSubmitted",
+			type: "BankDetailsUpdated",
 			data: { ...command.data },
 		},
 	];
@@ -133,7 +105,7 @@ function decideApprovePoA(
 	command: ApproveProofOfAddress,
 	state: GrantState,
 ): GrantEvent[] {
-	if (state.status !== "bank_details_submitted") {
+	if (state.status !== "awaiting_review") {
 		throw new IllegalStateError(
 			`Cannot approve proof of address in ${state.status} state`,
 		);
@@ -150,7 +122,7 @@ function decideRejectPoA(
 	command: RejectProofOfAddress,
 	state: GrantState,
 ): GrantEvent[] {
-	if (state.status !== "bank_details_submitted") {
+	if (state.status !== "awaiting_review") {
 		throw new IllegalStateError(
 			`Cannot reject proof of address in ${state.status} state`,
 		);
@@ -170,7 +142,7 @@ function decideRejectPoA(
 		},
 	];
 
-	if (attempt >= 3) {
+	if (attempt >= 2) {
 		events.push({
 			type: "CashAlternativeOffered",
 			data: {
@@ -322,25 +294,30 @@ export function evolve(state: GrantState, event: GrantEvent): GrantState {
 			if (event.data.paymentPreference === "cash") {
 				return { ...coreData, status: "awaiting_cash_handover" };
 			}
-			return { ...coreData, status: "awaiting_bank_details", poaAttempts: 0 };
+			const { bankDetails } = event.data;
+			return {
+				...coreData,
+				status: "awaiting_review",
+				sortCode: bankDetails?.sortCode ?? "",
+				accountNumber: bankDetails?.accountNumber ?? "",
+				proofOfAddressRef: bankDetails?.proofOfAddressRef ?? "",
+				poaAttempts: 0,
+			};
 		}
 		case "VolunteerAssigned": {
 			if (state.status === "initial") return state;
 			return { ...state, volunteerId: event.data.volunteerId };
 		}
-		case "BankDetailsSubmitted": {
-			if (state.status !== "awaiting_bank_details") return state;
+		case "BankDetailsUpdated": {
+			if (state.status !== "awaiting_review") return state;
 			return {
 				...state,
-				status: "bank_details_submitted",
-				poaAttempts: state.poaAttempts + 1,
 				sortCode: event.data.sortCode,
 				accountNumber: event.data.accountNumber,
-				proofOfAddressRef: event.data.proofOfAddressRef,
 			};
 		}
 		case "ProofOfAddressApproved": {
-			if (state.status !== "bank_details_submitted") return state;
+			if (state.status !== "awaiting_review") return state;
 			return {
 				grantId: state.grantId,
 				applicationId: state.applicationId,
@@ -353,16 +330,10 @@ export function evolve(state: GrantState, event: GrantEvent): GrantState {
 			};
 		}
 		case "ProofOfAddressRejected": {
-			if (state.status !== "bank_details_submitted") return state;
+			if (state.status !== "awaiting_review") return state;
 			return {
-				grantId: state.grantId,
-				applicationId: state.applicationId,
-				applicantId: state.applicantId,
-				monthCycle: state.monthCycle,
-				rank: state.rank,
-				volunteerId: state.volunteerId,
-				status: "awaiting_bank_details",
-				poaAttempts: state.poaAttempts,
+				...state,
+				poaAttempts: state.poaAttempts + 1,
 			};
 		}
 		case "CashAlternativeOffered": {

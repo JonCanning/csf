@@ -1,15 +1,21 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
 	acceptCashAlternative,
+	approveProofOfAddress,
 	declineCashAlternative,
 	recordPayment,
 	recordReimbursement,
 	rejectProofOfAddress,
-	submitBankDetails,
 } from "../../../src/domain/grant/commandHandlers.ts";
 import type { GrantEvent } from "../../../src/domain/grant/types.ts";
 import { createTestEnv, type TestEnv } from "../helpers/testEventStore.ts";
 import { queryGrant, selectWinner } from "../helpers/workflowSteps.ts";
+
+const bankDetails = {
+	sortCode: "12-34-56",
+	accountNumber: "12345678",
+	proofOfAddressRef: "poa-ref-test",
+};
 
 describe("POA rejection workflow", () => {
 	let env: TestEnv;
@@ -24,15 +30,6 @@ describe("POA rejection workflow", () => {
 
 	async function rejectPoaThreeTimes(appId: string) {
 		for (let i = 0; i < 3; i++) {
-			await submitBankDetails(
-				appId,
-				{
-					sortCode: "12-34-56",
-					accountNumber: "12345678",
-					proofOfAddressRef: `poa-ref-${i}`,
-				},
-				env.eventStore,
-			);
 			await rejectProofOfAddress(
 				appId,
 				"Bad document",
@@ -49,11 +46,12 @@ describe("POA rejection workflow", () => {
 			phone: "07700900022",
 			name: "Charlie",
 			paymentPreference: "bank",
+			bankDetails,
 		});
 
 		await rejectPoaThreeTimes(appId);
 
-		// Projection: poa_attempts = 3
+		// Projection: poa_attempts = 3, still awaiting_review until cash alt offered
 		let rows = await queryGrant(env, appId);
 		expect(rows[0]!.poa_attempts).toBe(3);
 
@@ -99,6 +97,7 @@ describe("POA rejection workflow", () => {
 			phone: "07700900023",
 			name: "Diana",
 			paymentPreference: "bank",
+			bankDetails,
 		});
 
 		await rejectPoaThreeTimes(appId);
@@ -116,34 +115,42 @@ describe("POA rejection workflow", () => {
 		expect(rows[0]!.poa_attempts).toBe(3);
 	});
 
-	test("POA rejection cycle projection tracks status transitions", async () => {
+	test("POA rejection stays in awaiting_review and increments poa_attempts", async () => {
 		const appId = "app-poa-proj";
 		await selectWinner(env, {
 			applicationId: appId,
 			phone: "07700900027",
 			name: "Eve",
 			paymentPreference: "bank",
+			bankDetails,
 		});
 
-		// Submit + reject once
-		await submitBankDetails(
-			appId,
-			{
-				sortCode: "12-34-56",
-				accountNumber: "12345678",
-				proofOfAddressRef: "poa-ref-0",
-			},
-			env.eventStore,
-		);
-
 		let rows = await queryGrant(env, appId);
-		expect(rows[0]!.status).toBe("bank_details_submitted");
-		expect(rows[0]!.poa_attempts).toBe(1);
+		expect(rows[0]!.status).toBe("awaiting_review");
+		expect(rows[0]!.poa_attempts).toBe(0);
 
 		await rejectProofOfAddress(appId, "Blurry", "vol-1", env.eventStore);
 
 		rows = await queryGrant(env, appId);
-		expect(rows[0]!.status).toBe("awaiting_bank_details");
+		expect(rows[0]!.status).toBe("awaiting_review");
+		expect(rows[0]!.poa_attempts).toBe(1);
+	});
+
+	test("approve after rejection → poa_approved", async () => {
+		const appId = "app-poa-approve-after-reject";
+		await selectWinner(env, {
+			applicationId: appId,
+			phone: "07700900028",
+			name: "Frank",
+			paymentPreference: "bank",
+			bankDetails,
+		});
+
+		await rejectProofOfAddress(appId, "Blurry", "vol-1", env.eventStore);
+		await approveProofOfAddress(appId, "vol-1", env.eventStore);
+
+		const rows = await queryGrant(env, appId);
+		expect(rows[0]!.status).toBe("poa_approved");
 		expect(rows[0]!.poa_attempts).toBe(1);
 	});
 });

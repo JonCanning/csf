@@ -313,15 +313,15 @@ export async function startServer(
 				return grantRoutes.serveDocument(poa.id);
 			}
 
-			// Grant document serving
+			// Grant document serving — look up poa_ref from the grant row
 			const grantDocMatch = url.pathname.match(
 				/^\/grants\/([^/]+)\/documents\/poa$/,
 			);
 			if (grantDocMatch?.[1] && req.method === "GET") {
-				const docs = await docStore.getByEntityId(grantDocMatch[1]);
-				const poa = docs.find((d) => d.type === "proof_of_address");
-				if (!poa) return new Response("Not found", { status: 404 });
-				return grantRoutes.serveDocument(poa.id);
+				const grant = await grantRepo.getById(grantDocMatch[1]);
+				if (!grant?.proofOfAddressRef)
+					return new Response("Not found", { status: 404 });
+				return grantRoutes.serveDocument(grant.proofOfAddressRef);
 			}
 
 			// Grant actions (must come before grant detail match)
@@ -339,10 +339,10 @@ export async function startServer(
 			}
 
 			const grantBankMatch = url.pathname.match(
-				/^\/grants\/([^/]+)\/submit-bank-details$/,
+				/^\/grants\/([^/]+)\/update-bank-details$/,
 			);
 			if (grantBankMatch?.[1] && req.method === "POST") {
-				return grantRoutes.handleSubmitBankDetails(grantBankMatch[1], req);
+				return grantRoutes.handleUpdateBankDetails(grantBankMatch[1], req);
 			}
 
 			const grantApprovePoaMatch = url.pathname.match(

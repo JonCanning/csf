@@ -100,7 +100,7 @@ describe("SQLiteGrantRepository", () => {
 		expect(grant).not.toBeNull();
 		expect(grant?.applicantName).toBe("Alice Smith");
 		expect(grant?.volunteerName).toBe("Bob Volunteer");
-		expect(grant?.status).toBe("awaiting_bank_details");
+		expect(grant?.status).toBe("awaiting_review");
 	});
 
 	test("getById returns null for unknown grant", async () => {
@@ -138,5 +138,53 @@ describe("SQLiteGrantRepository", () => {
 	test("listByMonth returns empty array for unknown month", async () => {
 		const grants = await repo.listByMonth("2099-01");
 		expect(grants).toEqual([]);
+	});
+
+	test("GrantCreated with bankDetails stores sortCode, accountNumber, proofOfAddressRef", async () => {
+		await eventStore.appendToStream<GrantEvent>("grant-g-bank-full", [
+			{
+				type: "GrantCreated",
+				data: {
+					grantId: "g-bank-full",
+					applicationId: "app-g-bank-full",
+					applicantId: "a1",
+					monthCycle: "2026-03",
+					rank: 1,
+					paymentPreference: "bank",
+					createdAt: "2026-03-01T00:00:00.000Z",
+					bankDetails: {
+						sortCode: "12-34-56",
+						accountNumber: "12345678",
+						proofOfAddressRef: "poa-ref-1",
+					},
+				},
+			},
+		]);
+
+		const grant = await repo.getById("g-bank-full");
+		expect(grant?.status).toBe("awaiting_review");
+		expect(grant?.sortCode).toBe("12-34-56");
+		expect(grant?.accountNumber).toBe("12345678");
+		expect(grant?.proofOfAddressRef).toBe("poa-ref-1");
+	});
+
+	test("BankDetailsUpdated updates sortCode and accountNumber", async () => {
+		await createGrant("g-bank");
+		await eventStore.appendToStream<GrantEvent>("grant-g-bank", [
+			{
+				type: "BankDetailsUpdated",
+				data: {
+					grantId: "g-bank",
+					sortCode: "99-88-77",
+					accountNumber: "99887766",
+					updatedAt: "2026-03-02T00:00:00.000Z",
+				},
+			},
+		]);
+
+		const grant = await repo.getById("g-bank");
+		expect(grant?.status).toBe("awaiting_review");
+		expect(grant?.sortCode).toBe("99-88-77");
+		expect(grant?.accountNumber).toBe("99887766");
 	});
 });

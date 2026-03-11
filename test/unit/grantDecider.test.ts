@@ -15,18 +15,14 @@ const core = {
 	rank: 1,
 };
 
-function awaitingBankDetails(poaAttempts = 0): GrantState {
-	return { ...core, status: "awaiting_bank_details", poaAttempts };
-}
-
-function bankDetailsSubmitted(poaAttempts = 1): GrantState {
+function awaitingReview(poaAttempts = 0): GrantState {
 	return {
 		...core,
-		status: "bank_details_submitted",
-		poaAttempts,
+		status: "awaiting_review",
 		sortCode: "12-34-56",
 		accountNumber: "12345678",
 		proofOfAddressRef: "poa-ref-1",
+		poaAttempts,
 	};
 }
 
@@ -74,7 +70,7 @@ function releasedState(): GrantState {
 // --- CreateGrant ---
 
 describe("CreateGrant", () => {
-	test("bank preference → GrantCreated", () => {
+	test("bank preference without bankDetails → GrantCreated, state awaiting_review with empty details", () => {
 		const events = decide(
 			{
 				type: "CreateGrant",
@@ -89,6 +85,29 @@ describe("CreateGrant", () => {
 		expect(events).toHaveLength(1);
 		expect(events[0]!.type).toBe("GrantCreated");
 		expect(events[0]!.data.paymentPreference).toBe("bank");
+	});
+
+	test("bank preference with bankDetails → GrantCreated only (details embedded)", () => {
+		const events = decide(
+			{
+				type: "CreateGrant",
+				data: {
+					...core,
+					paymentPreference: "bank",
+					createdAt: "2026-03-01T00:00:00Z",
+					bankDetails: {
+						sortCode: "12-34-56",
+						accountNumber: "12345678",
+						proofOfAddressRef: "poa-ref-1",
+					},
+				},
+			},
+			initialState(),
+		);
+		expect(events).toHaveLength(1);
+		expect(events[0]!.type).toBe("GrantCreated");
+		expect(events[0]!.data.bankDetails?.sortCode).toBe("12-34-56");
+		expect(events[0]!.data.bankDetails?.proofOfAddressRef).toBe("poa-ref-1");
 	});
 
 	test("cash preference → GrantCreated", () => {
@@ -108,35 +127,7 @@ describe("CreateGrant", () => {
 		expect(events[0]!.data.paymentPreference).toBe("cash");
 	});
 
-	test("bank preference with bankDetails → GrantCreated + BankDetailsSubmitted + ProofOfAddressApproved", () => {
-		const events = decide(
-			{
-				type: "CreateGrant",
-				data: {
-					...core,
-					paymentPreference: "bank",
-					createdAt: "2026-03-01T00:00:00Z",
-					bankDetails: {
-						sortCode: "12-34-56",
-						accountNumber: "12345678",
-						proofOfAddressRef: "poa-ref-1",
-					},
-				},
-			},
-			initialState(),
-		);
-		expect(events).toHaveLength(3);
-		expect(events[0]!.type).toBe("GrantCreated");
-		expect(events[1]!.type).toBe("BankDetailsSubmitted");
-		expect(events[1]!.data.sortCode).toBe("12-34-56");
-		expect(events[1]!.data.proofOfAddressRef).toBe("poa-ref-1");
-		expect(events[1]!.data.submittedAt).toBe("2026-03-01T00:00:00Z");
-		expect(events[2]!.type).toBe("ProofOfAddressApproved");
-		expect(events[2]!.data.verifiedBy).toBe("system");
-		expect(events[2]!.data.verifiedAt).toBe("2026-03-01T00:00:00Z");
-	});
-
-	test("bank preference with bankDetails → final evolved state is poa_approved", () => {
+	test("bank preference with bankDetails → final evolved state is awaiting_review", () => {
 		const events = decide(
 			{
 				type: "CreateGrant",
@@ -157,7 +148,11 @@ describe("CreateGrant", () => {
 		for (const event of events) {
 			state = evolve(state, event as Parameters<typeof evolve>[1]);
 		}
-		expect(state.status).toBe("poa_approved");
+		expect(state.status).toBe("awaiting_review");
+		if (state.status === "awaiting_review") {
+			expect(state.sortCode).toBe("12-34-56");
+			expect(state.proofOfAddressRef).toBe("poa-ref-1");
+		}
 	});
 
 	test("throws from non-initial state", () => {
@@ -171,44 +166,60 @@ describe("CreateGrant", () => {
 						createdAt: "2026-03-01T00:00:00Z",
 					},
 				},
-				awaitingBankDetails(),
+				awaitingReview(),
 			),
 		).toThrow(IllegalStateError);
 	});
 });
 
-// --- SubmitBankDetails ---
+// --- UpdateBankDetails ---
 
-describe("SubmitBankDetails", () => {
-	test("awaiting_bank_details → BankDetailsSubmitted", () => {
+describe("UpdateBankDetails", () => {
+	test("awaiting_review → BankDetailsUpdated", () => {
 		const events = decide(
 			{
-				type: "SubmitBankDetails",
+				type: "UpdateBankDetails",
 				data: {
 					grantId: "grant-1",
-					sortCode: "12-34-56",
-					accountNumber: "12345678",
-					proofOfAddressRef: "poa-ref-1",
-					submittedAt: "2026-03-02T00:00:00Z",
+					sortCode: "99-88-77",
+					accountNumber: "99887766",
+					updatedAt: "2026-03-02T00:00:00Z",
 				},
 			},
-			awaitingBankDetails(),
+			awaitingReview(),
 		);
 		expect(events).toHaveLength(1);
-		expect(events[0]!.type).toBe("BankDetailsSubmitted");
+		expect(events[0]!.type).toBe("BankDetailsUpdated");
+		expect(events[0]!.data.sortCode).toBe("99-88-77");
+	});
+
+	test("throws from poa_approved state", () => {
+		expect(() =>
+			decide(
+				{
+					type: "UpdateBankDetails",
+					data: {
+						grantId: "grant-1",
+						sortCode: "12-34-56",
+						accountNumber: "12345678",
+						updatedAt: "2026-03-02T00:00:00Z",
+					},
+				},
+				poaApproved(),
+			),
+		).toThrow(IllegalStateError);
 	});
 
 	test("throws from initial state", () => {
 		expect(() =>
 			decide(
 				{
-					type: "SubmitBankDetails",
+					type: "UpdateBankDetails",
 					data: {
 						grantId: "grant-1",
 						sortCode: "12-34-56",
 						accountNumber: "12345678",
-						proofOfAddressRef: "poa-ref-1",
-						submittedAt: "2026-03-02T00:00:00Z",
+						updatedAt: "2026-03-02T00:00:00Z",
 					},
 				},
 				initialState(),
@@ -220,7 +231,7 @@ describe("SubmitBankDetails", () => {
 // --- ApproveProofOfAddress ---
 
 describe("ApproveProofOfAddress", () => {
-	test("bank_details_submitted → ProofOfAddressApproved", () => {
+	test("awaiting_review → ProofOfAddressApproved", () => {
 		const events = decide(
 			{
 				type: "ApproveProofOfAddress",
@@ -230,7 +241,7 @@ describe("ApproveProofOfAddress", () => {
 					verifiedAt: "2026-03-03T00:00:00Z",
 				},
 			},
-			bankDetailsSubmitted(),
+			awaitingReview(),
 		);
 		expect(events).toHaveLength(1);
 		expect(events[0]!.type).toBe("ProofOfAddressApproved");
@@ -247,7 +258,7 @@ describe("ApproveProofOfAddress", () => {
 						verifiedAt: "2026-03-03T00:00:00Z",
 					},
 				},
-				awaitingBankDetails(),
+				paidState(),
 			),
 		).toThrow(IllegalStateError);
 	});
@@ -267,31 +278,40 @@ describe("RejectProofOfAddress", () => {
 	};
 
 	test("attempt 1 → ProofOfAddressRejected only", () => {
-		const events = decide(rejectCmd, bankDetailsSubmitted(1));
+		const events = decide(rejectCmd, awaitingReview(1));
 		expect(events).toHaveLength(1);
 		expect(events[0]!.type).toBe("ProofOfAddressRejected");
 		expect(events[0]!.data.attempt).toBe(1);
 	});
 
-	test("attempt 2 → ProofOfAddressRejected only", () => {
-		const events = decide(rejectCmd, bankDetailsSubmitted(2));
+	test("attempt 1 → ProofOfAddressRejected only", () => {
+		const events = decide(rejectCmd, awaitingReview(1));
 		expect(events).toHaveLength(1);
 		expect(events[0]!.type).toBe("ProofOfAddressRejected");
-		expect(events[0]!.data.attempt).toBe(2);
+		expect(events[0]!.data.attempt).toBe(1);
 	});
 
-	test("attempt 3 → ProofOfAddressRejected + CashAlternativeOffered", () => {
-		const events = decide(rejectCmd, bankDetailsSubmitted(3));
+	test("attempt 2 → ProofOfAddressRejected + CashAlternativeOffered", () => {
+		const events = decide(rejectCmd, awaitingReview(2));
 		expect(events).toHaveLength(2);
 		expect(events[0]!.type).toBe("ProofOfAddressRejected");
-		expect(events[0]!.data.attempt).toBe(3);
+		expect(events[0]!.data.attempt).toBe(2);
 		expect(events[1]!.type).toBe("CashAlternativeOffered");
 	});
 
 	test("throws from wrong state", () => {
-		expect(() => decide(rejectCmd, awaitingBankDetails())).toThrow(
-			IllegalStateError,
-		);
+		expect(() => decide(rejectCmd, paidState())).toThrow(IllegalStateError);
+	});
+
+	test("rejection stays in awaiting_review, increments poaAttempts", () => {
+		const before = awaitingReview(1);
+		const [event] = decide(rejectCmd, before);
+		const after = evolve(before, event as Parameters<typeof evolve>[1]);
+		expect(after.status).toBe("awaiting_review");
+		if (after.status === "awaiting_review") {
+			expect(after.poaAttempts).toBe(2);
+			expect(after.sortCode).toBe("12-34-56");
+		}
 	});
 });
 
@@ -317,7 +337,7 @@ describe("AcceptCashAlternative", () => {
 					type: "AcceptCashAlternative",
 					data: { grantId: "grant-1", acceptedAt: "2026-03-04T00:00:00Z" },
 				},
-				awaitingBankDetails(),
+				awaitingReview(),
 			),
 		).toThrow(IllegalStateError);
 	});
@@ -348,7 +368,7 @@ describe("DeclineCashAlternative", () => {
 					type: "DeclineCashAlternative",
 					data: { grantId: "grant-1", declinedAt: "2026-03-04T00:00:00Z" },
 				},
-				awaitingBankDetails(),
+				awaitingReview(),
 			),
 		).toThrow(IllegalStateError);
 	});
@@ -387,9 +407,7 @@ describe("RecordPayment", () => {
 	});
 
 	test("throws from wrong state", () => {
-		expect(() => decide(payCmd, awaitingBankDetails())).toThrow(
-			IllegalStateError,
-		);
+		expect(() => decide(payCmd, awaitingReview())).toThrow(IllegalStateError);
 	});
 
 	test("poa_approved rejects cash method", () => {
@@ -421,8 +439,8 @@ describe("ReleaseSlot", () => {
 		},
 	};
 
-	test("awaiting_bank_details → SlotReleased", () => {
-		const events = decide(releaseCmd, awaitingBankDetails());
+	test("awaiting_review → SlotReleased", () => {
+		const events = decide(releaseCmd, awaitingReview());
 		expect(events).toHaveLength(1);
 		expect(events[0]!.type).toBe("SlotReleased");
 		expect(events[0]!.data.applicationId).toBe("app-1");
@@ -467,8 +485,8 @@ describe("AssignVolunteer", () => {
 		},
 	};
 
-	test("awaiting_bank_details → VolunteerAssigned", () => {
-		const events = decide(assignCmd, awaitingBankDetails());
+	test("awaiting_review → VolunteerAssigned", () => {
+		const events = decide(assignCmd, awaitingReview());
 		expect(events).toHaveLength(1);
 		expect(events[0]!.type).toBe("VolunteerAssigned");
 	});
@@ -491,18 +509,26 @@ describe("AssignVolunteer", () => {
 // --- Evolve ---
 
 describe("evolve", () => {
-	test("GrantCreated (bank) → awaiting_bank_details with poaAttempts=0", () => {
+	test("GrantCreated (bank) → awaiting_review with bank details and poaAttempts=0", () => {
 		const state = evolve(initialState(), {
 			type: "GrantCreated",
 			data: {
 				...core,
 				paymentPreference: "bank",
 				createdAt: "2026-03-01T00:00:00Z",
+				bankDetails: {
+					sortCode: "12-34-56",
+					accountNumber: "12345678",
+					proofOfAddressRef: "poa-ref-1",
+				},
 			},
 		});
 		expect(state).toMatchObject({
-			status: "awaiting_bank_details",
+			status: "awaiting_review",
 			grantId: "grant-1",
+			sortCode: "12-34-56",
+			accountNumber: "12345678",
+			proofOfAddressRef: "poa-ref-1",
 			poaAttempts: 0,
 		});
 	});
@@ -522,26 +548,26 @@ describe("evolve", () => {
 		});
 	});
 
-	test("BankDetailsSubmitted → bank_details_submitted, increments poaAttempts", () => {
-		const state = evolve(awaitingBankDetails(0), {
-			type: "BankDetailsSubmitted",
+	test("BankDetailsUpdated → updates sort code and account number, stays awaiting_review", () => {
+		const state = evolve(awaitingReview(0), {
+			type: "BankDetailsUpdated",
 			data: {
 				grantId: "grant-1",
-				sortCode: "12-34-56",
-				accountNumber: "12345678",
-				proofOfAddressRef: "poa-ref-1",
-				submittedAt: "2026-03-02T00:00:00Z",
+				sortCode: "99-88-77",
+				accountNumber: "99887766",
+				updatedAt: "2026-03-02T00:00:00Z",
 			},
 		});
-		expect(state.status).toBe("bank_details_submitted");
-		if (state.status === "bank_details_submitted") {
-			expect(state.poaAttempts).toBe(1);
-			expect(state.sortCode).toBe("12-34-56");
+		expect(state.status).toBe("awaiting_review");
+		if (state.status === "awaiting_review") {
+			expect(state.sortCode).toBe("99-88-77");
+			expect(state.accountNumber).toBe("99887766");
+			expect(state.proofOfAddressRef).toBe("poa-ref-1");
 		}
 	});
 
 	test("ProofOfAddressApproved → poa_approved", () => {
-		const state = evolve(bankDetailsSubmitted(1), {
+		const state = evolve(awaitingReview(1), {
 			type: "ProofOfAddressApproved",
 			data: {
 				grantId: "grant-1",
@@ -552,8 +578,8 @@ describe("evolve", () => {
 		expect(state.status).toBe("poa_approved");
 	});
 
-	test("ProofOfAddressRejected → awaiting_bank_details", () => {
-		const state = evolve(bankDetailsSubmitted(1), {
+	test("ProofOfAddressRejected → stays awaiting_review, increments poaAttempts", () => {
+		const state = evolve(awaitingReview(1), {
 			type: "ProofOfAddressRejected",
 			data: {
 				grantId: "grant-1",
@@ -563,11 +589,14 @@ describe("evolve", () => {
 				rejectedAt: "2026-03-03T00:00:00Z",
 			},
 		});
-		expect(state.status).toBe("awaiting_bank_details");
+		expect(state.status).toBe("awaiting_review");
+		if (state.status === "awaiting_review") {
+			expect(state.poaAttempts).toBe(2);
+		}
 	});
 
 	test("CashAlternativeOffered → offered_cash_alternative", () => {
-		const state = evolve(bankDetailsSubmitted(3), {
+		const state = evolve(awaitingReview(3), {
 			type: "CashAlternativeOffered",
 			data: { grantId: "grant-1", offeredAt: "2026-03-03T00:00:00Z" },
 		});
@@ -583,13 +612,10 @@ describe("evolve", () => {
 	});
 
 	test("CashAlternativeDeclined → released is handled by SlotReleased", () => {
-		// CashAlternativeDeclined itself doesn't change status meaningfully
-		// since SlotReleased follows immediately — but evolve must handle it
 		const state = evolve(offeredCashAlt(), {
 			type: "CashAlternativeDeclined",
 			data: { grantId: "grant-1", declinedAt: "2026-03-04T00:00:00Z" },
 		});
-		// State stays same — SlotReleased will transition to released
 		expect(state.status).toBe("offered_cash_alternative");
 	});
 
@@ -615,7 +641,7 @@ describe("evolve", () => {
 	});
 
 	test("SlotReleased → released", () => {
-		const state = evolve(awaitingBankDetails(), {
+		const state = evolve(awaitingReview(), {
 			type: "SlotReleased",
 			data: {
 				grantId: "grant-1",
@@ -631,7 +657,7 @@ describe("evolve", () => {
 	});
 
 	test("VolunteerAssigned → sets volunteerId", () => {
-		const state = evolve(awaitingBankDetails(), {
+		const state = evolve(awaitingReview(), {
 			type: "VolunteerAssigned",
 			data: {
 				grantId: "grant-1",
@@ -639,7 +665,7 @@ describe("evolve", () => {
 				assignedAt: "2026-03-02T00:00:00Z",
 			},
 		});
-		if (state.status === "awaiting_bank_details") {
+		if (state.status === "awaiting_review") {
 			expect(state.volunteerId).toBe("vol-1");
 		}
 	});

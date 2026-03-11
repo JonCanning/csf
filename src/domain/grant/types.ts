@@ -30,14 +30,13 @@ export type AssignVolunteer = Command<
 	}
 >;
 
-export type SubmitBankDetails = Command<
-	"SubmitBankDetails",
+export type UpdateBankDetails = Command<
+	"UpdateBankDetails",
 	{
 		grantId: string;
 		sortCode: string;
 		accountNumber: string;
-		proofOfAddressRef: string;
-		submittedAt: string;
+		updatedAt: string;
 	}
 >;
 
@@ -110,7 +109,7 @@ export type RecordReimbursement = Command<
 export type GrantCommand =
 	| CreateGrant
 	| AssignVolunteer
-	| SubmitBankDetails
+	| UpdateBankDetails
 	| ApproveProofOfAddress
 	| RejectProofOfAddress
 	| AcceptCashAlternative
@@ -131,6 +130,11 @@ export type GrantCreated = Event<
 		rank: number;
 		paymentPreference: PaymentPreference;
 		createdAt: string;
+		bankDetails?: {
+			sortCode: string;
+			accountNumber: string;
+			proofOfAddressRef: string;
+		};
 	}
 >;
 
@@ -143,14 +147,13 @@ export type VolunteerAssigned = Event<
 	}
 >;
 
-export type BankDetailsSubmitted = Event<
-	"BankDetailsSubmitted",
+export type BankDetailsUpdated = Event<
+	"BankDetailsUpdated",
 	{
 		grantId: string;
 		sortCode: string;
 		accountNumber: string;
-		proofOfAddressRef: string;
-		submittedAt: string;
+		updatedAt: string;
 	}
 >;
 
@@ -238,7 +241,7 @@ export type VolunteerReimbursed = Event<
 export type GrantEvent =
 	| GrantCreated
 	| VolunteerAssigned
-	| BankDetailsSubmitted
+	| BankDetailsUpdated
 	| ProofOfAddressApproved
 	| ProofOfAddressRejected
 	| CashAlternativeOffered
@@ -264,15 +267,11 @@ type GrantCore = {
 export type GrantState =
 	| { status: "initial" }
 	| (GrantCore & {
-			status: "awaiting_bank_details";
-			poaAttempts: number;
-	  })
-	| (GrantCore & {
-			status: "bank_details_submitted";
-			poaAttempts: number;
+			status: "awaiting_review";
 			sortCode: string;
 			accountNumber: string;
 			proofOfAddressRef: string;
+			poaAttempts: number;
 	  })
 	| (GrantCore & {
 			status: "poa_approved";

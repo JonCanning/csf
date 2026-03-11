@@ -11,11 +11,7 @@ function escapeHtml(s: string): string {
 
 const COLUMNS = [
 	{
-		statuses: [
-			"awaiting_bank_details",
-			"bank_details_submitted",
-			"offered_cash_alternative",
-		],
+		statuses: ["awaiting_review", "offered_cash_alternative"],
 		label: "Awaiting Review",
 		color: "bg-amber-50 border-amber-200",
 	},
