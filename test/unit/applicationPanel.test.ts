@@ -19,6 +19,8 @@ const app: ApplicationRow = {
 	acceptedAt: "2026-03-01T10:00:00Z",
 	selectedAt: null,
 	rejectedAt: null,
+	email: null,
+	meetingPlace: "Mill Road",
 	sortCode: null,
 	accountNumber: null,
 	poaRef: null,
@@ -60,8 +62,22 @@ describe("viewPanel", () => {
 		expect(html).not.toContain("View Applicant");
 	});
 
+	test("shows meeting place", () => {
+		const html = viewPanel(app);
+		expect(html).toContain("Mill Road");
+	});
+
+	test("shows email when present", () => {
+		const html = viewPanel({ ...app, email: "alice@example.com" });
+		expect(html).toContain("alice@example.com");
+	});
+
 	test("shows bank details when present", () => {
-		const withBank = { ...app, sortCode: "12-34-56", accountNumber: "12345678" };
+		const withBank = {
+			...app,
+			sortCode: "12-34-56",
+			accountNumber: "12345678",
+		};
 		const html = viewPanel(withBank);
 		expect(html).toContain("12-34-56");
 		expect(html).toContain("12345678");

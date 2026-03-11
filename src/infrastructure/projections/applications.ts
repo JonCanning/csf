@@ -28,6 +28,8 @@ export const applicationsProjection = sqliteProjection<ApplicationEvent>({
 				accepted_at TEXT,
 				selected_at TEXT,
 				rejected_at TEXT,
+				email TEXT,
+				meeting_place TEXT,
 				sort_code TEXT,
 				account_number TEXT,
 				poa_ref TEXT

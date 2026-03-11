@@ -48,20 +48,26 @@ function detailFields(app: ApplicationRow): string {
 	const fields = [
 		field("Name", app.name ?? "—"),
 		field("Phone", app.phone ?? "—"),
+		...(app.email ? [field("Email", app.email)] : []),
 		field("Status", formatStatus(app.status)),
 		field("Payment Preference", formatPaymentPreference(app.paymentPreference)),
+		...(app.meetingPlace ? [field("Meeting Place", app.meetingPlace)] : []),
 		field("Month Cycle", app.monthCycle),
 		field("Applied", formatDate(app.appliedAt)),
 	];
 
-	if (app.acceptedAt) fields.push(field("Accepted", formatDate(app.acceptedAt)));
-	if (app.selectedAt) fields.push(field("Selected", formatDate(app.selectedAt)));
-	if (app.rejectedAt) fields.push(field("Rejected", formatDate(app.rejectedAt)));
+	if (app.acceptedAt)
+		fields.push(field("Accepted", formatDate(app.acceptedAt)));
+	if (app.selectedAt)
+		fields.push(field("Selected", formatDate(app.selectedAt)));
+	if (app.rejectedAt)
+		fields.push(field("Rejected", formatDate(app.rejectedAt)));
 	if (app.rank != null) fields.push(field("Lottery Rank", String(app.rank)));
 	if (app.rejectReason) fields.push(field("Reject Reason", app.rejectReason));
 
 	if (app.sortCode) fields.push(field("Sort Code", app.sortCode));
-	if (app.accountNumber) fields.push(field("Account Number", app.accountNumber));
+	if (app.accountNumber)
+		fields.push(field("Account Number", app.accountNumber));
 
 	if (app.poaRef) {
 		fields.push(
