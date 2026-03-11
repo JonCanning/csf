@@ -23,7 +23,6 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bunx playwright install --with-deps chromium
       - run: bunx @tailwindcss/cli -i src/web/styles/app.css -o src/web/styles/dist/app.css --minify
-      - run: bun src/web/seed.ts
       - name: Start server
         run: bun src/web/index.ts &
         env:
