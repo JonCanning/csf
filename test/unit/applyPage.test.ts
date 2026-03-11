@@ -74,6 +74,7 @@ describe("applyResultPage — reference number", () => {
 		const html = applyResultPage("accepted", undefined, "abc-123");
 		expect(html).toContain("abc-123");
 		expect(html).toContain("reference");
+		expect(html).toContain("/status?ref=abc-123");
 	});
 
 	test("omits reference number block when not provided", () => {
