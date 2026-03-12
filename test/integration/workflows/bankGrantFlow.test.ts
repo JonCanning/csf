@@ -118,7 +118,7 @@ describe("bank grant workflow", () => {
 		await approveProofOfAddress(appId, "vol-1", env.eventStore).catch(() => {}); // approve first to confirm state, then reject
 
 		// Actually test rejection flow properly
-		const appId2 = "app-poa-reject-2";
+		const appId2 = "app-poa2-reject";
 		await selectWinner(env, {
 			applicationId: appId2,
 			phone: "07700900052",

@@ -45,7 +45,9 @@ function makeSubmitCommand(overrides?: {
 			paymentPreference: "bank" as const,
 			meetingDetails: { place: "Town Hall" },
 			monthCycle: MONTH,
-			identityResolution: overrides?.identityResolution ?? { type: "new" as const },
+			identityResolution: overrides?.identityResolution ?? {
+				type: "new" as const,
+			},
 			eligibility: overrides?.eligibility ?? { status: "eligible" as const },
 			submittedAt: NOW,
 		},
@@ -264,7 +266,12 @@ describe("application decider", () => {
 						selectedAt: NOW,
 					},
 				},
-				{ status: "confirmed", applicationId: APP_ID, applicantId: APPLICANT_ID, monthCycle: MONTH },
+				{
+					status: "confirmed",
+					applicationId: APP_ID,
+					applicantId: APPLICANT_ID,
+					monthCycle: MONTH,
+				},
 			);
 
 			expect(events[0]?.type).toBe("ApplicationSelected");
@@ -282,7 +289,12 @@ describe("application decider", () => {
 							selectedAt: NOW,
 						},
 					},
-					{ status: "submitted", applicationId: APP_ID, applicantId: APPLICANT_ID, monthCycle: MONTH },
+					{
+						status: "submitted",
+						applicationId: APP_ID,
+						applicantId: APPLICANT_ID,
+						monthCycle: MONTH,
+					},
 				),
 			).toThrow(IllegalStateError);
 		});
@@ -317,7 +329,12 @@ describe("application decider", () => {
 							rejectedAt: NOW,
 						},
 					},
-					{ status: "submitted", applicationId: APP_ID, applicantId: APPLICANT_ID, monthCycle: MONTH },
+					{
+						status: "submitted",
+						applicationId: APP_ID,
+						applicantId: APPLICANT_ID,
+						monthCycle: MONTH,
+					},
 				),
 			).toThrow(IllegalStateError);
 		});
@@ -343,10 +360,20 @@ describe("application decider", () => {
 
 		it("transitions to accepted after ApplicationAccepted", () => {
 			const state = evolve(
-				{ status: "submitted", applicationId: APP_ID, applicantId: APPLICANT_ID, monthCycle: MONTH },
+				{
+					status: "submitted",
+					applicationId: APP_ID,
+					applicantId: APPLICANT_ID,
+					monthCycle: MONTH,
+				},
 				{
 					type: "ApplicationAccepted",
-					data: { applicationId: APP_ID, applicantId: APPLICANT_ID, monthCycle: MONTH, acceptedAt: NOW },
+					data: {
+						applicationId: APP_ID,
+						applicantId: APPLICANT_ID,
+						monthCycle: MONTH,
+						acceptedAt: NOW,
+					},
 				},
 			);
 

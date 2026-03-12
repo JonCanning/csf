@@ -105,7 +105,10 @@ describe("grant decider", () => {
 
 	describe("RejectProofOfAddress — PoA cash alternative logic", () => {
 		it("does NOT emit CashAlternativeOffered on first rejection (poaAttempts = 0)", () => {
-			const stateWith0Attempts: GrantState = { ...awaitingReviewState, poaAttempts: 0 };
+			const stateWith0Attempts: GrantState = {
+				...awaitingReviewState,
+				poaAttempts: 0,
+			};
 			const events = decide(
 				{
 					type: "RejectProofOfAddress",
@@ -121,11 +124,16 @@ describe("grant decider", () => {
 
 			expect(events).toHaveLength(1);
 			expect(events[0]?.type).toBe("ProofOfAddressRejected");
-			expect(events.some((e) => e.type === "CashAlternativeOffered")).toBe(false);
+			expect(events.some((e) => e.type === "CashAlternativeOffered")).toBe(
+				false,
+			);
 		});
 
 		it("emits CashAlternativeOffered on second rejection (poaAttempts = 1)", () => {
-			const stateWith1Attempt: GrantState = { ...awaitingReviewState, poaAttempts: 1 };
+			const stateWith1Attempt: GrantState = {
+				...awaitingReviewState,
+				poaAttempts: 1,
+			};
 			const events = decide(
 				{
 					type: "RejectProofOfAddress",
@@ -145,7 +153,10 @@ describe("grant decider", () => {
 		});
 
 		it("emits CashAlternativeOffered on third rejection (poaAttempts = 2)", () => {
-			const stateWith2Attempts: GrantState = { ...awaitingReviewState, poaAttempts: 2 };
+			const stateWith2Attempts: GrantState = {
+				...awaitingReviewState,
+				poaAttempts: 2,
+			};
 			const events = decide(
 				{
 					type: "RejectProofOfAddress",
@@ -159,7 +170,9 @@ describe("grant decider", () => {
 				stateWith2Attempts,
 			);
 
-			expect(events.some((e) => e.type === "CashAlternativeOffered")).toBe(true);
+			expect(events.some((e) => e.type === "CashAlternativeOffered")).toBe(
+				true,
+			);
 		});
 
 		it("increments poaAttempts in state after rejection", () => {
@@ -186,7 +199,10 @@ describe("grant decider", () => {
 		});
 
 		it("transitions to offered_cash_alternative state after CashAlternativeOffered", () => {
-			const stateWith1Attempt: GrantState = { ...awaitingReviewState, poaAttempts: 1 };
+			const stateWith1Attempt: GrantState = {
+				...awaitingReviewState,
+				poaAttempts: 1,
+			};
 			const events = decide(
 				{
 					type: "RejectProofOfAddress",
@@ -533,7 +549,11 @@ describe("grant decider", () => {
 					...GRANT_CORE,
 					paymentPreference: "bank",
 					createdAt: NOW,
-					bankDetails: { sortCode: "12-34-56", accountNumber: "12345678", proofOfAddressRef: "ref" },
+					bankDetails: {
+						sortCode: "12-34-56",
+						accountNumber: "12345678",
+						proofOfAddressRef: "ref",
+					},
 				},
 			});
 

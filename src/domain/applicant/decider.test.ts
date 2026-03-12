@@ -91,7 +91,10 @@ describe("applicant decider", () => {
 
 			expect(events).toHaveLength(1);
 			expect(events[0]?.type).toBe("ApplicantUpdated");
-			expect(events[0]?.data).toMatchObject({ phone: "07700900001", name: "Jane Smith" });
+			expect(events[0]?.data).toMatchObject({
+				phone: "07700900001",
+				name: "Jane Smith",
+			});
 		});
 
 		it("throws on initial state", () => {

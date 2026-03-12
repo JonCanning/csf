@@ -15,7 +15,7 @@ export const applicationsProjection = sqliteProjection<ApplicationEvent>({
 	init: async ({ context: { connection } }) => {
 		await connection.command(`
 			CREATE TABLE IF NOT EXISTS applications (
-				ref INTEGER PRIMARY KEY,
+				ref TEXT NOT NULL UNIQUE,
 				id TEXT NOT NULL UNIQUE,
 				applicant_id TEXT NOT NULL,
 				month_cycle TEXT NOT NULL,
@@ -44,9 +44,10 @@ export const applicationsProjection = sqliteProjection<ApplicationEvent>({
 				case "ApplicationSubmitted":
 					await connection.command(
 						`INSERT OR IGNORE INTO applications
-						   (id, applicant_id, month_cycle, status, payment_preference, name, phone, applied_at, sort_code, account_number, poa_ref)
-						 VALUES (?, ?, ?, 'applied', ?, ?, ?, ?, ?, ?, ?)`,
+						   (ref, id, applicant_id, month_cycle, status, payment_preference, name, phone, applied_at, sort_code, account_number, poa_ref)
+						 VALUES (?, ?, ?, ?, 'applied', ?, ?, ?, ?, ?, ?, ?)`,
 						[
+							data.applicationId.slice(0, 8),
 							data.applicationId,
 							data.applicantId,
 							data.monthCycle,

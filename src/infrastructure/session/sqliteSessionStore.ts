@@ -65,10 +65,9 @@ export async function SQLiteSessionStore(
 
 		async destroyByVolunteerId(volunteerId: string): Promise<void> {
 			await pool.withConnection(async (conn) => {
-				await conn.command(
-					"DELETE FROM sessions WHERE volunteer_id = ?",
-					[volunteerId],
-				);
+				await conn.command("DELETE FROM sessions WHERE volunteer_id = ?", [
+					volunteerId,
+				]);
 			});
 		},
 

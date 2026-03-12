@@ -50,15 +50,14 @@ export function createStatusRoutes(
 			}
 
 			// Malformed ref — skip DB query
-			const refNum = parseInt(ref, 10);
-			if (!Number.isInteger(refNum) || refNum <= 0 || String(refNum) !== ref) {
+			if (!/^[0-9a-f]{8}$/.test(ref)) {
 				return html(statusLookupPage(NOT_FOUND_MSG));
 			}
 
 			// Lookup application
 			let app: ApplicationRow | null;
 			try {
-				app = await appRepo.getByRef(refNum);
+				app = await appRepo.getByRef(ref);
 			} catch {
 				return html(statusLookupPage(NOT_FOUND_MSG));
 			}

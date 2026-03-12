@@ -67,18 +67,22 @@ describe("SQLiteApplicationRepository", () => {
 		expect(app).toBeNull();
 	});
 
-	test("getByRef returns application by auto-assigned integer ref", async () => {
-		await seedApplication("app-1", "2026-03", "Alice", "07700900001");
-		const byId = await repo.getById("app-1");
-		expect(byId).not.toBeNull();
-		const byRef = await repo.getByRef(byId!.ref);
+	test("getByRef returns application by uuid-derived ref", async () => {
+		await seedApplication(
+			"a3f2b1c4-0000-0000-0000-000000000000",
+			"2026-03",
+			"Alice",
+			"07700900001",
+		);
+		const byRef = await repo.getByRef("a3f2b1c4");
 		expect(byRef).not.toBeNull();
-		expect(byRef!.id).toBe("app-1");
+		expect(byRef!.id).toBe("a3f2b1c4-0000-0000-0000-000000000000");
 		expect(byRef!.name).toBe("Alice");
+		expect(byRef!.ref).toBe("a3f2b1c4");
 	});
 
 	test("getByRef returns null for unknown ref", async () => {
-		const app = await repo.getByRef(99999);
+		const app = await repo.getByRef("00000000");
 		expect(app).toBeNull();
 	});
 

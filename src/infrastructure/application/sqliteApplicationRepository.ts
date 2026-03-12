@@ -6,7 +6,7 @@ import type {
 } from "../../domain/application/repository.ts";
 
 type DbRow = {
-	ref: number;
+	ref: string;
 	id: string;
 	applicant_id: string;
 	month_cycle: string;
@@ -74,7 +74,7 @@ export function SQLiteApplicationRepository(
 			}
 		},
 
-		async getByRef(ref: number): Promise<ApplicationRow | null> {
+		async getByRef(ref: string): Promise<ApplicationRow | null> {
 			try {
 				return await pool.withConnection(async (conn) => {
 					const rows = await conn.query<DbRow>(

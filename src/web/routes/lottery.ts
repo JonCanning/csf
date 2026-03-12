@@ -100,9 +100,9 @@ export function createLotteryRoutes(
 
 			// Read back the LotteryDrawn event to feed the process manager
 			const stream = await eventStore.readStream(`lottery-${monthCycle}`);
-			const drawnEvent = stream.events.findLast((e) => e.type === "LotteryDrawn") as
-				| LotteryDrawn
-				| undefined;
+			const drawnEvent = stream.events.findLast(
+				(e) => e.type === "LotteryDrawn",
+			) as LotteryDrawn | undefined;
 			if (drawnEvent) {
 				await processLotteryDrawn(drawnEvent, eventStore);
 

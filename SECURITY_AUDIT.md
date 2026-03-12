@@ -41,10 +41,10 @@
 - **Description:** ALTCHA present but no IP-based rate limit — application flooding and ALTCHA challenge exhaustion are possible.
 - **Fix:** Apply a `checkLoginRateLimit()` equivalent to the `/apply` POST route.
 
-### H6 — Sequential Integer Refs Enable Enumeration
+### H6 — Sequential Integer Refs Enable Enumeration ✅ Fixed 2026-03-12
 - **Files:** `src/web/routes/status.ts:53-54`, `src/web/pages/status.ts:337-358`
 - **Description:** `/status?ref=1`, `ref=2`, ... exposes all applicants' status and payment progress. The 30 req/min rate limit is no meaningful barrier.
-- **Fix:** Replace sequential integers with random alphanumeric tokens (e.g., 8-char base62).
+- **Fix:** `ref` is now the first 8 hex chars of the application UUID (e.g. `a3f2b1c4`). Unguessable, derived from the existing UUID, no extra generation needed. Status route validates with `/^[0-9a-f]{8}$/`.
 
 ---
 
