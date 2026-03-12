@@ -76,6 +76,25 @@ function withSecurityHeaders(res: Response): Response {
 	});
 }
 
+type RouteHandler = (req: Request) => Response | Promise<Response>;
+type RouteMethods = Record<string, RouteHandler>;
+
+function secureRoutes(
+	routes: Record<string, RouteMethods>,
+): Record<string, RouteMethods> {
+	return Object.fromEntries(
+		Object.entries(routes).map(([path, methods]) => [
+			path,
+			Object.fromEntries(
+				Object.entries(methods).map(([method, handler]) => [
+					method,
+					async (req: Request) => withSecurityHeaders(await handler(req)),
+				]),
+			),
+		]),
+	);
+}
+
 export async function getAuthenticatedVolunteer(
 	req: Request,
 	sessionStore: SessionStore,
@@ -155,7 +174,7 @@ export async function startServer(
 
 	return Bun.serve({
 		port,
-		routes: {
+		routes: secureRoutes({
 			"/apply": {
 				GET: () => applyRoutes.showForm(),
 				POST: (req) => applyRoutes.handleSubmit(req),
@@ -332,7 +351,7 @@ export async function startServer(
 					return applicantRoutes.closePanel();
 				},
 			},
-		},
+		}),
 		async fetch(req) {
 			const url = new URL(req.url);
 			const volunteer = await requireAuth(req);

@@ -16,20 +16,20 @@
 
 ## HIGH
 
-### H1 — Security Headers Miss All Routed Responses
+### H1 — Security Headers Miss All Routed Responses ✅ Fixed 2026-03-12
 - **File:** `src/web/server.ts:149-327`
 - **Description:** `withSecurityHeaders()` only runs in the `fetch()` fallback (lines 332, 592). Every route in `routes: {}` — including `/login`, `/apply`, `/change-password` — returns responses with no CSP, no `X-Frame-Options`, no `X-Content-Type-Options`.
-- **Fix:** Wrap every route handler's response with `withSecurityHeaders()`, or apply it as a response-interceptor.
+- **Fix:** Added `secureRoutes()` wrapper that applies `withSecurityHeaders()` to every handler in the routes object.
 
 ### H2 — No CSRF Protection on State-Mutating POSTs
 - **Files:** `src/web/server.ts:153,211,218,228`
 - **Description:** `SameSite=Lax` doesn't block form-submission CSRF. `/login` is vulnerable to login CSRF (attacker logs victim into attacker's account).
 - **Fix:** Add CSRF tokens to all mutating forms, or use `SameSite=Strict` for admin cookies.
 
-### H3 — XSS via Unescaped `volunteerName`
+### H3 — XSS via Unescaped `volunteerName` ✅ Fixed 2026-03-12
 - **File:** `src/web/pages/applicantHistoryPanel.ts:28-33`
 - **Description:** `volunteerName` interpolated raw into HTML. A volunteer named `<script>alert(1)</script>` executes in every history panel view.
-- **Fix:** Wrap with `escapeHtml()`.
+- **Fix:** Added `escapeHtml()` and wrapped all three `volunteerName` interpolations.
 
 ### H4 — Bank Details in Query String
 - **File:** `src/web/pages/grantPanel.ts:150`

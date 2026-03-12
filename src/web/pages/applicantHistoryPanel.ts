@@ -4,6 +4,14 @@ export type HistoryEntry = {
 	timestamp: string;
 };
 
+function escapeHtml(s: string): string {
+	return s
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;");
+}
+
 function formatDate(iso: string): string {
 	const d = new Date(iso);
 	return d.toLocaleDateString("en-GB", {
@@ -25,12 +33,12 @@ function eventLabel(entry: HistoryEntry): string {
 	switch (entry.type) {
 		case "ApplicantCreated":
 			return entry.volunteerName
-				? `Created by <span class="font-semibold text-bark">${entry.volunteerName}</span>`
+				? `Created by <span class="font-semibold text-bark">${escapeHtml(entry.volunteerName)}</span>`
 				: "Created via application";
 		case "ApplicantUpdated":
-			return `Updated by <span class="font-semibold text-bark">${entry.volunteerName ?? "unknown"}</span>`;
+			return `Updated by <span class="font-semibold text-bark">${escapeHtml(entry.volunteerName ?? "unknown")}</span>`;
 		case "ApplicantDeleted":
-			return `Deleted by <span class="font-semibold text-bark">${entry.volunteerName ?? "unknown"}</span>`;
+			return `Deleted by <span class="font-semibold text-bark">${escapeHtml(entry.volunteerName ?? "unknown")}</span>`;
 	}
 }
 
