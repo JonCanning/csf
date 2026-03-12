@@ -1,7 +1,13 @@
 import type { Volunteer } from "../../domain/volunteer/types.ts";
 
 function escapeSignalValue(s: string): string {
-	return s.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n");
+	return s
+		.replace(/\\/g, "\\\\")
+		.replace(/'/g, "\\'")
+		.replace(/\n/g, "\\n")
+		.replace(/<\//g, "<\\/")
+		.replace(/</g, "\\u003C")
+		.replace(/>/g, "\\u003E");
 }
 
 function panelWrapper(content: string): string {

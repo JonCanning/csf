@@ -11,6 +11,7 @@ export const applicantProjection = sqliteProjection<ApplicantEvent>({
 				phone TEXT NOT NULL,
 				name TEXT NOT NULL,
 				email TEXT,
+				notes TEXT,
 				created_at TEXT NOT NULL,
 				updated_at TEXT NOT NULL
 			)

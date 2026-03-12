@@ -68,7 +68,7 @@ export const applicationsProjection = sqliteProjection<ApplicationEvent>({
 					break;
 				case "ApplicationConfirmed":
 					await connection.command(
-						"UPDATE applications SET status = 'accepted', accepted_at = ?, applicant_id = ? WHERE id = ?",
+						"UPDATE applications SET status = 'confirmed', accepted_at = ?, applicant_id = ? WHERE id = ?",
 						[data.confirmedAt, data.applicantId, data.applicationId],
 					);
 					break;

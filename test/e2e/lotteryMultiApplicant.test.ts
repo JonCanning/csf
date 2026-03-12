@@ -170,10 +170,9 @@ test.describe("lottery with multiple applicants", () => {
 		// Close panel, click bank grant — should be awaiting review
 		await page.locator("#panel button", { hasText: "Close" }).click();
 		await page.locator("text=Bank Mixed").click();
-		await expect(page.locator("#panel")).toContainText(
-			"Awaiting Review",
-			{ timeout: 10000 },
-		);
+		await expect(page.locator("#panel")).toContainText("Awaiting Review", {
+			timeout: 10000,
+		});
 		await expect(page.locator("#panel")).toContainText("Bank Transfer");
 	});
 });

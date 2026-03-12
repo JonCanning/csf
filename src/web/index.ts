@@ -17,13 +17,17 @@ const applicantRepo = await SQLiteApplicantRepository(pool);
 
 const admins = await volunteerRepo.getAdmins();
 if (admins.length === 0) {
+	const adminPassword = process.env.ADMIN_PASSWORD;
+	if (!adminPassword) {
+		throw new Error(
+			"ADMIN_PASSWORD environment variable is required when no admin account exists",
+		);
+	}
 	await createVolunteer(
-		{ name: "admin", password: "admin", isAdmin: true },
+		{ name: "admin", password: adminPassword, isAdmin: true },
 		eventStore,
 	);
-	console.log(
-		"No admin found — created default account (name: admin, password: admin). Change password on first login.",
-	);
+	console.log("No admin found — created default account (name: admin).");
 }
 
 const server = await startServer(

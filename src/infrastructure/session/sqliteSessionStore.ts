@@ -6,6 +6,8 @@ export interface SessionStore {
 	create(volunteerId: string): Promise<string>;
 	get(sessionId: string): Promise<string | null>;
 	destroy(sessionId: string): Promise<void>;
+	destroyByVolunteerId(volunteerId: string): Promise<void>;
+	destroyAllExcept(volunteerId: string, sessionId: string): Promise<void>;
 	cleanup(): Promise<void>;
 }
 
@@ -61,6 +63,27 @@ export async function SQLiteSessionStore(
 			});
 		},
 
+		async destroyByVolunteerId(volunteerId: string): Promise<void> {
+			await pool.withConnection(async (conn) => {
+				await conn.command(
+					"DELETE FROM sessions WHERE volunteer_id = ?",
+					[volunteerId],
+				);
+			});
+		},
+
+		async destroyAllExcept(
+			volunteerId: string,
+			sessionId: string,
+		): Promise<void> {
+			await pool.withConnection(async (conn) => {
+				await conn.command(
+					"DELETE FROM sessions WHERE volunteer_id = ? AND id != ?",
+					[volunteerId, sessionId],
+				);
+			});
+		},
+
 		async cleanup(): Promise<void> {
 			await pool.withConnection(async (conn) => {
 				await conn.command("DELETE FROM sessions WHERE expires_at < ?", [
@@ -69,4 +92,11 @@ export async function SQLiteSessionStore(
 			});
 		},
 	};
+}
+
+export function startCleanupTimer(sessionStore: SessionStore): void {
+	const ONE_HOUR_MS = 60 * 60 * 1000;
+	setInterval(() => {
+		void sessionStore.cleanup();
+	}, ONE_HOUR_MS);
 }

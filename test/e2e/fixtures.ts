@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test as base, type Page } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 import { solveChallenge } from "altcha-lib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -136,7 +136,9 @@ export async function assignVolunteer(page: Page): Promise<void> {
 	await expect(select).toBeVisible({ timeout: 5000 });
 	await select.selectOption({ label: "Test" });
 	await page.locator("#panel button", { hasText: "Assign" }).click();
-	await expect(page.locator("#panel")).toContainText("Test", { timeout: 10000 });
+	await expect(page.locator("#panel")).toContainText("Test", {
+		timeout: 10000,
+	});
 }
 
 /** Open lottery window, optionally close it, optionally run draw */

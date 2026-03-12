@@ -144,10 +144,10 @@ export function SQLiteGrantRepository(
 
 		async updateNotes(id: string, notes: string): Promise<void> {
 			await pool.withConnection(async (conn) => {
-				await conn.command(
-					"UPDATE grants SET notes = ? WHERE id = ?",
-					[notes || null, id],
-				);
+				await conn.command("UPDATE grants SET notes = ? WHERE id = ?", [
+					notes || null,
+					id,
+				]);
 			});
 		},
 	};

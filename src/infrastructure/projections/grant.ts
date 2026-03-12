@@ -49,7 +49,8 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 		try {
 			await connection.command("ALTER TABLE grants ADD COLUMN notes TEXT");
 		} catch (e) {
-			if (!(e instanceof Error && e.message.includes("duplicate column"))) throw e;
+			if (!(e instanceof Error && e.message.includes("duplicate column")))
+				throw e;
 		}
 	},
 

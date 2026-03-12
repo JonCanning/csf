@@ -112,11 +112,11 @@ describe("auth routes", () => {
 				{ name: "Bob", password: "old-pw" },
 				eventStore,
 			);
-			const handler = handleChangePassword(volunteerRepo, eventStore);
+			const handler = handleChangePassword(volunteerRepo, eventStore, sessionStore);
 			const form = new URLSearchParams({
 				currentPassword: "old-pw",
-				newPassword: "new-pw",
-				confirmPassword: "new-pw",
+				newPassword: "new-password-123",
+				confirmPassword: "new-password-123",
 			});
 			const req = new Request("http://localhost/change-password", {
 				method: "POST",
@@ -128,7 +128,7 @@ describe("auth routes", () => {
 			const res = await handler(req, id);
 			expect(res.status).toBe(302);
 			expect(res.headers.get("location")).toBe("/");
-			const valid = await volunteerRepo.verifyPassword(id, "new-pw");
+			const valid = await volunteerRepo.verifyPassword(id, "new-password-123");
 			expect(valid).toBe(true);
 		});
 
@@ -137,11 +137,11 @@ describe("auth routes", () => {
 				{ name: "Bob2", password: "old-pw" },
 				eventStore,
 			);
-			const handler = handleChangePassword(volunteerRepo, eventStore);
+			const handler = handleChangePassword(volunteerRepo, eventStore, sessionStore);
 			const form = new URLSearchParams({
 				currentPassword: "wrong",
-				newPassword: "new-pw",
-				confirmPassword: "new-pw",
+				newPassword: "new-password-123",
+				confirmPassword: "new-password-123",
 			});
 			const req = new Request("http://localhost/change-password", {
 				method: "POST",
@@ -161,7 +161,7 @@ describe("auth routes", () => {
 				{ name: "Bob3", password: "old-pw" },
 				eventStore,
 			);
-			const handler = handleChangePassword(volunteerRepo, eventStore);
+			const handler = handleChangePassword(volunteerRepo, eventStore, sessionStore);
 			const form = new URLSearchParams({
 				currentPassword: "old-pw",
 				newPassword: "new-pw",

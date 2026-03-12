@@ -40,7 +40,7 @@ export async function createVolunteer(
 	const now = new Date().toISOString();
 	const passwordHash = await Bun.password.hash(data.password);
 
-	await handle(eventStore, streamId(id), (_state) =>
+	await handle(eventStore, streamId(id), (state) =>
 		decide(
 			{
 				type: "CreateVolunteer",
@@ -55,7 +55,7 @@ export async function createVolunteer(
 					createdAt: now,
 				},
 			},
-			initialState(),
+			state,
 		),
 	);
 

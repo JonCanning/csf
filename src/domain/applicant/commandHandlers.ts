@@ -25,7 +25,7 @@ export async function createApplicant(
 	const id = toApplicantId(data.phone, data.name);
 	const now = new Date().toISOString();
 
-	await handle(eventStore, streamId(id), (_state) =>
+	await handle(eventStore, streamId(id), (state) =>
 		decide(
 			{
 				type: "CreateApplicant",
@@ -38,7 +38,7 @@ export async function createApplicant(
 					createdAt: now,
 				},
 			},
-			initialState(),
+			state,
 		),
 	);
 

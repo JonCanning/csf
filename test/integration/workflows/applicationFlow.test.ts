@@ -267,7 +267,7 @@ describe("application workflow", () => {
 			// Projection: accepted with Bob's applicant ID
 			const apps = await queryApplications(env);
 			const flagged = apps.find((a) => a.id === "app-flagged");
-			expect(flagged!.status).toBe("accepted");
+			expect(flagged!.status).toBe("confirmed");
 			expect(flagged!.applicant_id).toBe(submittedApplicantId);
 		});
 
@@ -321,7 +321,7 @@ describe("application workflow", () => {
 
 			const apps = await queryApplications(env);
 			const confirmed = apps.find((a) => a.id === "app-flagged");
-			expect(confirmed!.status).toBe("accepted");
+			expect(confirmed!.status).toBe("confirmed");
 			expect(confirmed!.applicant_id).toBe(submittedApplicantId);
 		});
 

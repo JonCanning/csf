@@ -103,10 +103,25 @@ export function createApplyRoutes(
 
 			const applicationId = crypto.randomUUID();
 
+			const ALLOWED_POA_MIME_TYPES = [
+				"image/jpeg",
+				"image/png",
+				"image/gif",
+				"image/webp",
+				"application/pdf",
+			];
+
 			let proofOfAddressRef = "";
 			if (paymentPref === "bank") {
 				const poaFile = formData.get("poa");
 				if (poaFile instanceof File && poaFile.size > 0) {
+					if (poaFile.size > 5 * 1024 * 1024) {
+						return new Response("File too large (max 5MB)", { status: 400 });
+					}
+					if (!ALLOWED_POA_MIME_TYPES.includes(poaFile.type)) {
+						return new Response("Invalid file type", { status: 400 });
+					}
+					const validatedMimeType = poaFile.type;
 					const docId = crypto.randomUUID();
 					const buffer = Buffer.from(await poaFile.arrayBuffer());
 					await docStore.store({
@@ -114,7 +129,7 @@ export function createApplyRoutes(
 						entityId: applicationId,
 						type: "proof_of_address",
 						data: buffer,
-						mimeType: poaFile.type || "application/octet-stream",
+						mimeType: validatedMimeType,
 					});
 					proofOfAddressRef = docId;
 				}

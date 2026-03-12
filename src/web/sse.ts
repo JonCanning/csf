@@ -31,10 +31,15 @@ export function removeElements(selector: string): SSEAction {
 }
 
 export function redirectTo(url: string): SSEAction {
+	if (!url.startsWith("/")) {
+		throw new Error(`redirectTo: only relative paths are allowed, got: ${url}`);
+	}
+	if (url.includes("</script>") || url.includes("\0")) {
+		throw new Error(`redirectTo: URL contains unsafe sequences`);
+	}
+	const safeUrl = url.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 	return (stream) =>
-		stream.executeScript(
-			`window.location.href = '${url.replace(/'/g, "\\'")}'`,
-		);
+		stream.executeScript(`window.location.href = '${safeUrl}'`);
 }
 
 export function sseResponse(...actions: SSEAction[]): Response {

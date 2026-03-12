@@ -2,7 +2,9 @@ const COOKIE_NAME = "session";
 const MAX_AGE = 86400; // 24 hours
 
 export function setSessionCookie(sessionId: string): string {
-	return `${COOKIE_NAME}=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MAX_AGE}`;
+	const secure =
+		process.env.NODE_ENV !== "development" ? "; Secure" : "";
+	return `${COOKIE_NAME}=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MAX_AGE}${secure}`;
 }
 
 export function getSessionId(request: Request): string | null {

@@ -29,8 +29,8 @@ describe("POA rejection workflow", () => {
 		await env.cleanup();
 	});
 
-	async function rejectPoaThreeTimes(appId: string) {
-		for (let i = 0; i < 3; i++) {
+	async function rejectPoaTwice(appId: string) {
+		for (let i = 0; i < 2; i++) {
 			await rejectProofOfAddress(
 				appId,
 				"Bad document",
@@ -40,7 +40,7 @@ describe("POA rejection workflow", () => {
 		}
 	}
 
-	test("3x POA rejection → accept cash → pay → reimburse", async () => {
+	test("2x POA rejection → accept cash → pay → reimburse", async () => {
 		const appId = "app-poa-cash";
 		await selectWinner(env, {
 			applicationId: appId,
@@ -50,11 +50,11 @@ describe("POA rejection workflow", () => {
 			bankDetails,
 		});
 
-		await rejectPoaThreeTimes(appId);
+		await rejectPoaTwice(appId);
 
-		// Projection: poa_attempts = 3, still awaiting_review until cash alt offered
+		// Projection: poa_attempts = 2, cash alternative offered after 2nd rejection
 		let rows = await queryGrant(env, appId);
-		expect(rows[0]!.poa_attempts).toBe(3);
+		expect(rows[0]!.poa_attempts).toBe(2);
 
 		await acceptCashAlternative(appId, env.eventStore);
 		await assignVolunteer(appId, "vol-1", env.eventStore);
@@ -92,7 +92,7 @@ describe("POA rejection workflow", () => {
 		expect(rows[0]!.status).toBe("reimbursed");
 	});
 
-	test("3x POA rejection → decline cash → slot released", async () => {
+	test("2x POA rejection → decline cash → slot released", async () => {
 		const appId = "app-poa-decline";
 		await selectWinner(env, {
 			applicationId: appId,
@@ -102,7 +102,7 @@ describe("POA rejection workflow", () => {
 			bankDetails,
 		});
 
-		await rejectPoaThreeTimes(appId);
+		await rejectPoaTwice(appId);
 
 		await declineCashAlternative(appId, env.eventStore);
 
@@ -114,7 +114,7 @@ describe("POA rejection workflow", () => {
 		// Projection: released
 		const rows = await queryGrant(env, appId);
 		expect(rows[0]!.status).toBe("released");
-		expect(rows[0]!.poa_attempts).toBe(3);
+		expect(rows[0]!.poa_attempts).toBe(2);
 	});
 
 	test("POA rejection stays in awaiting_review and increments poa_attempts", async () => {

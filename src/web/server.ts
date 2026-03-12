@@ -8,7 +8,10 @@ import { SQLiteApplicationRepository } from "../infrastructure/application/sqlit
 import { getSessionId } from "../infrastructure/auth/cookie.ts";
 import { SQLiteGrantRepository } from "../infrastructure/grant/sqliteGrantRepository.ts";
 import { DocumentStore } from "../infrastructure/projections/documents.ts";
-import type { SessionStore } from "../infrastructure/session/sqliteSessionStore.ts";
+import {
+	startCleanupTimer,
+	type SessionStore,
+} from "../infrastructure/session/sqliteSessionStore.ts";
 import { changePasswordPage } from "./pages/changePassword.ts";
 import { dashboardPage } from "./pages/dashboard.ts";
 import { loginPage } from "./pages/login.ts";
@@ -25,6 +28,52 @@ import { createGrantRoutes } from "./routes/grants.ts";
 import { createLotteryRoutes } from "./routes/lottery.ts";
 import { createStatusRoutes } from "./routes/status.ts";
 import { createVolunteerRoutes } from "./routes/volunteers.ts";
+
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkLoginRateLimit(req: Request): Response | null {
+	const forwarded = req.headers.get("x-forwarded-for");
+	const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
+	const now = Date.now();
+	const windowMs = 15 * 60 * 1000;
+	const limit = 10;
+
+	// Clean up expired entries
+	for (const [key, entry] of loginAttempts) {
+		if (now >= entry.resetAt) loginAttempts.delete(key);
+	}
+
+	const entry = loginAttempts.get(ip);
+	if (entry && now < entry.resetAt) {
+		if (entry.count >= limit) {
+			return new Response("Too Many Requests", { status: 429 });
+		}
+		entry.count++;
+	} else {
+		loginAttempts.set(ip, { count: 1, resetAt: now + windowMs });
+	}
+	return null;
+}
+
+const SECURITY_HEADERS: Record<string, string> = {
+	"X-Content-Type-Options": "nosniff",
+	"X-Frame-Options": "SAMEORIGIN",
+	"Referrer-Policy": "strict-origin-when-cross-origin",
+	"Content-Security-Policy":
+		"default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'",
+};
+
+function withSecurityHeaders(res: Response): Response {
+	const headers = new Headers(res.headers);
+	for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+		headers.set(key, value);
+	}
+	return new Response(res.body, {
+		status: res.status,
+		statusText: res.statusText,
+		headers,
+	});
+}
 
 export async function getAuthenticatedVolunteer(
 	req: Request,
@@ -46,10 +95,14 @@ export async function startServer(
 	pool: ReturnType<typeof SQLiteConnectionPool>,
 	port = 3000,
 ) {
+	startCleanupTimer(sessionStore);
 	const login = handleLogin(sessionStore, volunteerRepo);
 	const logout = handleLogout(sessionStore);
 	const loginHtml = loginPage();
-	const hmacKey = process.env.ALTCHA_HMAC_KEY ?? "change-me-in-production";
+	const hmacKey = process.env.ALTCHA_HMAC_KEY;
+	if (!hmacKey) {
+		throw new Error("ALTCHA_HMAC_KEY environment variable is required");
+	}
 	const docStore = DocumentStore(pool);
 	await docStore.init();
 	const appRepo = SQLiteApplicationRepository(pool);
@@ -83,7 +136,11 @@ export async function startServer(
 		eventStore,
 	);
 	const altchaRoutes = createAltchaRoutes(hmacKey);
-	const changePasswordHandler = handleChangePassword(volunteerRepo, eventStore);
+	const changePasswordHandler = handleChangePassword(
+		volunteerRepo,
+		eventStore,
+		sessionStore,
+	);
 
 	async function requireAuth(req: Request) {
 		return getAuthenticatedVolunteer(req, sessionStore, volunteerRepo);
@@ -151,10 +208,14 @@ export async function startServer(
 					new Response(loginHtml, {
 						headers: { "Content-Type": "text/html" },
 					}),
-				POST: (req) => login(req),
+				POST: (req) => {
+					const limited = checkLoginRateLimit(req);
+					if (limited) return limited;
+					return login(req);
+				},
 			},
 			"/logout": {
-				GET: (req) => logout(req),
+				POST: (req) => logout(req),
 			},
 			"/change-password": {
 				GET: async (req) => {
@@ -268,7 +329,7 @@ export async function startServer(
 		async fetch(req) {
 			const url = new URL(req.url);
 			const volunteer = await requireAuth(req);
-			if (!volunteer) return Response.redirect("/login", 302);
+			if (!volunteer) return withSecurityHeaders(Response.redirect("/login", 302));
 
 			if (url.pathname === "/volunteers" && req.method === "POST") {
 				if (!volunteer.isAdmin)
@@ -528,7 +589,7 @@ export async function startServer(
 				}
 			}
 
-			return new Response("Not found", { status: 404 });
+			return withSecurityHeaders(new Response("Not found", { status: 404 }));
 		},
 	});
 }

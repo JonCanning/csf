@@ -19,7 +19,13 @@ function formatDate(iso: string | null): string {
 }
 
 function escapeSignalValue(s: string): string {
-	return s.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n");
+	return s
+		.replace(/\\/g, "\\\\")
+		.replace(/'/g, "\\'")
+		.replace(/\n/g, "\\n")
+		.replace(/<\//g, "<\\/")
+		.replace(/</g, "\\u003C")
+		.replace(/>/g, "\\u003E");
 }
 
 function formatStatus(status: string): string {

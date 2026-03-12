@@ -3,6 +3,7 @@ import { changePassword } from "../../domain/volunteer/commandHandlers.ts";
 import type { VolunteerRepository } from "../../domain/volunteer/repository.ts";
 import {
 	clearSessionCookie,
+	getSessionId,
 	setSessionCookie,
 } from "../../infrastructure/auth/cookie.ts";
 import type { SessionStore } from "../../infrastructure/session/sqliteSessionStore.ts";
@@ -41,6 +42,7 @@ export function handleLogin(
 			return loginResponse("Invalid name or password");
 		}
 
+		await sessionStore.destroyByVolunteerId(volunteer.id);
 		const sessionId = await sessionStore.create(volunteer.id);
 		const location = volunteer.requiresPasswordReset ? "/change-password" : "/";
 		return new Response(null, {
@@ -70,6 +72,7 @@ function changePasswordResponse(error: string): Response {
 export function handleChangePassword(
 	volunteerRepo: VolunteerRepository,
 	eventStore: SQLiteEventStore,
+	sessionStore: SessionStore,
 ) {
 	return async (req: Request, volunteerId: string): Promise<Response> => {
 		const form = await req.formData();
@@ -90,8 +93,8 @@ export function handleChangePassword(
 		if (newPassword !== confirmPassword) {
 			return changePasswordResponse("New passwords do not match");
 		}
-		if (newPassword.length < 4) {
-			return changePasswordResponse("Password must be at least 4 characters");
+		if (newPassword.length < 12) {
+			return changePasswordResponse("Password must be at least 12 characters");
 		}
 		const valid = await volunteerRepo.verifyPassword(
 			volunteerId,
@@ -101,6 +104,10 @@ export function handleChangePassword(
 			return changePasswordResponse("Current password is incorrect");
 		}
 		await changePassword(volunteerId, newPassword, eventStore);
+		const currentSessionId = getSessionId(req);
+		if (currentSessionId) {
+			await sessionStore.destroyAllExcept(volunteerId, currentSessionId);
+		}
 		return new Response(null, {
 			status: 302,
 			headers: { Location: "/" },
@@ -110,9 +117,6 @@ export function handleChangePassword(
 
 export function handleLogout(sessionStore: SessionStore) {
 	return async (req: Request): Promise<Response> => {
-		const { getSessionId } = await import(
-			"../../infrastructure/auth/cookie.ts"
-		);
 		const sid = getSessionId(req);
 		if (sid) {
 			await sessionStore.destroy(sid);
