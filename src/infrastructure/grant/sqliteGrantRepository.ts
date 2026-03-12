@@ -28,6 +28,7 @@ type DbRow = {
 	reimbursed_at: string | null;
 	released_reason: string | null;
 	released_at: string | null;
+	notes: string | null;
 	created_at: string;
 	updated_at: string;
 };
@@ -61,6 +62,7 @@ function rowToGrant(row: DbRow): GrantRow {
 		reimbursedAt: row.reimbursed_at,
 		releasedReason: row.released_reason,
 		releasedAt: row.released_at,
+		notes: row.notes,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
@@ -138,6 +140,15 @@ export function SQLiteGrantRepository(
 				if (isNoSuchTable(err)) return [];
 				throw err;
 			}
+		},
+
+		async updateNotes(id: string, notes: string): Promise<void> {
+			await pool.withConnection(async (conn) => {
+				await conn.command(
+					"UPDATE grants SET notes = ? WHERE id = ?",
+					[notes || null, id],
+				);
+			});
 		},
 	};
 }

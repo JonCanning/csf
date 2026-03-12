@@ -39,10 +39,18 @@ export const grantProjection = sqliteProjection<GrantEvent>({
 				reimbursed_at TEXT,
 				released_reason TEXT,
 				released_at TEXT,
+				notes TEXT,
 				created_at TEXT NOT NULL,
 				updated_at TEXT NOT NULL
 			)
 		`);
+		// Migration: add notes column to existing databases
+		// (CREATE TABLE above already includes it for fresh installs)
+		try {
+			await connection.command("ALTER TABLE grants ADD COLUMN notes TEXT");
+		} catch (e) {
+			if (!(e instanceof Error && e.message.includes("duplicate column"))) throw e;
+		}
 	},
 
 	handle: async (events, { connection }) => {

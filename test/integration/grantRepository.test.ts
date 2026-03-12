@@ -168,6 +168,25 @@ describe("SQLiteGrantRepository", () => {
 		expect(grant?.proofOfAddressRef).toBe("poa-ref-1");
 	});
 
+	describe("updateNotes", () => {
+		test("persists notes on the grant", async () => {
+			await createGrant("g-notes");
+
+			await repo.updateNotes("g-notes", "Call applicant Tuesday");
+
+			const grant = await repo.getById("g-notes");
+			expect(grant?.notes).toBe("Call applicant Tuesday");
+		});
+
+		test("clears notes when empty string provided", async () => {
+			await createGrant("g-notes-clear");
+			await repo.updateNotes("g-notes-clear", "Initial note");
+			await repo.updateNotes("g-notes-clear", "");
+			const grant = await repo.getById("g-notes-clear");
+			expect(grant?.notes).toBeFalsy();
+		});
+	});
+
 	test("BankDetailsUpdated updates sortCode and accountNumber", async () => {
 		await createGrant("g-bank");
 		await eventStore.appendToStream<GrantEvent>("grant-g-bank", [

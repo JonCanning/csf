@@ -22,6 +22,7 @@ export type GrantRow = {
 	reimbursedAt: string | null;
 	releasedReason: string | null;
 	releasedAt: string | null;
+	notes: string | null;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -31,4 +32,5 @@ export interface GrantRepository {
 	getByApplicationId(applicationId: string): Promise<GrantRow | null>;
 	listByMonth(monthCycle: string): Promise<GrantRow[]>;
 	listDistinctMonths(): Promise<string[]>;
+	updateNotes(id: string, notes: string): Promise<void>;
 }
