@@ -3,6 +3,7 @@ import type { ApplicationRow } from "../../src/domain/application/repository.ts"
 import { applicationsPage } from "../../src/web/pages/applications.ts";
 
 const app: ApplicationRow = {
+	ref: 42,
 	id: "app-1",
 	applicantId: "applicant-07700900001",
 	monthCycle: "2026-03",
@@ -81,7 +82,7 @@ describe("applicationsPage", () => {
 
 	test("includes link to applicant status page per row", () => {
 		const html = applicationsPage([app], ["2026-03"], "2026-03");
-		expect(html).toContain(`/status?ref=${app.id}`);
+		expect(html).toContain(`/status?ref=${app.ref}`);
 		expect(html).toContain('target="_blank"');
 	});
 });

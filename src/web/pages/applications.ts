@@ -54,7 +54,7 @@ export function applicationRow(a: ApplicationRow): string {
 		<td class="px-4 py-3 text-bark-muted text-sm">${a.appliedAt ? formatDate(a.appliedAt) : ""}</td>
 		<td class="px-4 py-3">
 			<a
-				href="/status?ref=${encodeURIComponent(a.id)}"
+				href="/status?ref=${a.ref}"
 				target="_blank"
 				class="text-xs text-bark-muted underline hover:text-bark"
 				title="View applicant status page"
