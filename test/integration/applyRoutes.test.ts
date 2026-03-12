@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createChallenge, solveChallenge } from "altcha-lib";
+import { SQLiteApplicationRepository } from "../../src/infrastructure/application/sqliteApplicationRepository.ts";
 import { DocumentStore } from "../../src/infrastructure/projections/documents.ts";
 import { createApplyRoutes } from "../../src/web/routes/apply.ts";
 import { createTestEnv, type TestEnv } from "./helpers/testEventStore.ts";
@@ -39,6 +40,7 @@ describe("apply routes", () => {
 			env.applicantRepo,
 			hmacKey,
 			docStore,
+			SQLiteApplicationRepository(env.pool),
 		);
 	});
 

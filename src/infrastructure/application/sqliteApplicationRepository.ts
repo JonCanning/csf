@@ -6,6 +6,7 @@ import type {
 } from "../../domain/application/repository.ts";
 
 type DbRow = {
+	ref: number;
 	id: string;
 	applicant_id: string;
 	month_cycle: string;
@@ -32,6 +33,7 @@ function isNoSuchTable(err: unknown): boolean {
 
 function rowToApplication(row: DbRow): ApplicationRow {
 	return {
+		ref: row.ref,
 		id: row.id,
 		applicantId: row.applicant_id,
 		monthCycle: row.month_cycle,
@@ -63,6 +65,21 @@ export function SQLiteApplicationRepository(
 					const rows = await conn.query<DbRow>(
 						"SELECT * FROM applications WHERE id = ?",
 						[id],
+					);
+					return rows.length > 0 ? rowToApplication(rows[0]!) : null;
+				});
+			} catch (err) {
+				if (isNoSuchTable(err)) return null;
+				throw err;
+			}
+		},
+
+		async getByRef(ref: number): Promise<ApplicationRow | null> {
+			try {
+				return await pool.withConnection(async (conn) => {
+					const rows = await conn.query<DbRow>(
+						"SELECT * FROM applications WHERE ref = ?",
+						[ref],
 					);
 					return rows.length > 0 ? rowToApplication(rows[0]!) : null;
 				});

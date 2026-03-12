@@ -15,7 +15,8 @@ export const applicationsProjection = sqliteProjection<ApplicationEvent>({
 	init: async ({ context: { connection } }) => {
 		await connection.command(`
 			CREATE TABLE IF NOT EXISTS applications (
-				id TEXT PRIMARY KEY,
+				ref INTEGER PRIMARY KEY,
+				id TEXT NOT NULL UNIQUE,
 				applicant_id TEXT NOT NULL,
 				month_cycle TEXT NOT NULL,
 				status TEXT NOT NULL,

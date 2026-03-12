@@ -67,6 +67,21 @@ describe("SQLiteApplicationRepository", () => {
 		expect(app).toBeNull();
 	});
 
+	test("getByRef returns application by auto-assigned integer ref", async () => {
+		await seedApplication("app-1", "2026-03", "Alice", "07700900001");
+		const byId = await repo.getById("app-1");
+		expect(byId).not.toBeNull();
+		const byRef = await repo.getByRef(byId!.ref);
+		expect(byRef).not.toBeNull();
+		expect(byRef!.id).toBe("app-1");
+		expect(byRef!.name).toBe("Alice");
+	});
+
+	test("getByRef returns null for unknown ref", async () => {
+		const app = await repo.getByRef(99999);
+		expect(app).toBeNull();
+	});
+
 	test("listByMonth returns applications for given month", async () => {
 		await seedApplication("app-1", "2026-03", "Alice", "07700900001");
 		await seedApplication("app-2", "2026-03", "Bob", "07700900002");

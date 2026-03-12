@@ -52,12 +52,14 @@ export async function startServer(
 	const hmacKey = process.env.ALTCHA_HMAC_KEY ?? "change-me-in-production";
 	const docStore = DocumentStore(pool);
 	await docStore.init();
+	const appRepo = SQLiteApplicationRepository(pool);
 	const applyRoutes = createApplyRoutes(
 		eventStore,
 		pool,
 		applicantRepo,
 		hmacKey,
 		docStore,
+		appRepo,
 	);
 	const applicantRoutes = createApplicantRoutes(
 		applicantRepo,
@@ -65,7 +67,6 @@ export async function startServer(
 		eventStore,
 	);
 	const volunteerRoutes = createVolunteerRoutes(volunteerRepo, eventStore);
-	const appRepo = SQLiteApplicationRepository(pool);
 	const applicationRoutes = createApplicationRoutes(
 		appRepo,
 		applicantRepo,

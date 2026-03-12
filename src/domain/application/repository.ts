@@ -1,4 +1,5 @@
 export type ApplicationRow = {
+	ref: number;
 	id: string;
 	applicantId: string;
 	monthCycle: string;
@@ -26,6 +27,7 @@ export type ApplicationFilters = {
 
 export interface ApplicationRepository {
 	getById(id: string): Promise<ApplicationRow | null>;
+	getByRef(ref: number): Promise<ApplicationRow | null>;
 	listByMonth(
 		monthCycle: string,
 		filters?: ApplicationFilters,

@@ -6,6 +6,7 @@ import { verifySolution } from "altcha-lib";
 import type { ApplicantRepository } from "../../domain/applicant/repository.ts";
 import { toApplicantId } from "../../domain/application/applicantId.ts";
 import { checkEligibility } from "../../domain/application/checkEligibility.ts";
+import type { ApplicationRepository } from "../../domain/application/repository.ts";
 import { submitApplication } from "../../domain/application/submitApplication.ts";
 import type { PaymentPreference } from "../../domain/application/types.ts";
 import type { DocumentStore } from "../../infrastructure/projections/documents.ts";
@@ -41,6 +42,7 @@ export function createApplyRoutes(
 	applicantRepo: ApplicantRepository,
 	hmacKey: string,
 	docStore: ReturnType<typeof DocumentStore>,
+	appRepo: ApplicationRepository,
 ) {
 	return {
 		async showForm(): Promise<Response> {
@@ -156,7 +158,9 @@ export function createApplyRoutes(
 				status = "flagged";
 			}
 
-			const params = new URLSearchParams({ status, ref: applicationId });
+			const app = await appRepo.getById(applicationId);
+			const ref = String(app?.ref ?? applicationId);
+			const params = new URLSearchParams({ status, ref });
 			if (reason) params.set("reason", reason);
 
 			return Response.redirect(`/apply/result?${params}`, 302);

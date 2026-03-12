@@ -5,9 +5,6 @@ import type {
 import type { GrantRepository } from "../../domain/grant/repository.ts";
 import { statusLookupPage, statusTimelinePage } from "../pages/status.ts";
 
-const UUID_RE =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 const NOT_FOUND_MSG =
 	"We couldn't find an application with that reference number. Please check and try again.";
 
@@ -26,14 +23,15 @@ export function createStatusRoutes(
 			}
 
 			// Malformed ref — skip DB query
-			if (!UUID_RE.test(ref)) {
+			const refNum = parseInt(ref, 10);
+			if (!Number.isInteger(refNum) || refNum <= 0 || String(refNum) !== ref) {
 				return html(statusLookupPage(NOT_FOUND_MSG));
 			}
 
 			// Lookup application
 			let app: ApplicationRow | null;
 			try {
-				app = await appRepo.getById(ref);
+				app = await appRepo.getByRef(refNum);
 			} catch {
 				return html(statusLookupPage(NOT_FOUND_MSG));
 			}
@@ -46,7 +44,7 @@ export function createStatusRoutes(
 			let grant = null;
 			if (app.status === "selected") {
 				try {
-					grant = await grantRepo.getByApplicationId(ref);
+					grant = await grantRepo.getByApplicationId(app.id);
 				} catch {
 					// Non-fatal: render without grant (shows "volunteer being assigned")
 				}

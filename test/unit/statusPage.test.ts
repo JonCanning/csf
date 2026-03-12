@@ -8,6 +8,7 @@ import {
 
 function makeApp(overrides: Partial<ApplicationRow> = {}): ApplicationRow {
 	return {
+		ref: 1,
 		id: "app-uuid-1",
 		applicantId: "applicant-07700900001",
 		monthCycle: "2026-03",
