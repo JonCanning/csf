@@ -1,7 +1,10 @@
 import type { SQLiteConnectionPool } from "@event-driven-io/emmett-sqlite";
 import type { VolunteerRepository } from "../../domain/volunteer/repository.ts";
 import type { Volunteer } from "../../domain/volunteer/types.ts";
-import { VOLUNTEERS_TABLE_DDL } from "./schema.ts";
+import {
+	VOLUNTEER_CREDENTIALS_TABLE_DDL,
+	VOLUNTEERS_TABLE_DDL,
+} from "./schema.ts";
 
 type VolunteerRow = {
 	id: string;
@@ -35,6 +38,7 @@ export async function SQLiteVolunteerRepository(
 ): Promise<VolunteerRepository> {
 	await pool.withConnection(async (conn) => {
 		await conn.command(VOLUNTEERS_TABLE_DDL);
+		await conn.command(VOLUNTEER_CREDENTIALS_TABLE_DDL);
 	});
 
 	return {
@@ -80,8 +84,8 @@ export async function SQLiteVolunteerRepository(
 
 		async verifyPassword(id: string, password: string): Promise<boolean> {
 			return await pool.withConnection(async (conn) => {
-				const rows = await conn.query<Pick<VolunteerRow, "password_hash">>(
-					"SELECT password_hash FROM volunteers WHERE id = ?",
+				const rows = await conn.query<{ password_hash: string }>(
+					"SELECT password_hash FROM volunteer_credentials WHERE volunteer_id = ?",
 					[id],
 				);
 				const row = rows[0];

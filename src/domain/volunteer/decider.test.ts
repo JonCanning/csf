@@ -10,7 +10,6 @@ const activeState: VolunteerState = {
 	status: "active",
 	id: "vol-1",
 	name: "Alice",
-	passwordHash: "hash-abc",
 	isAdmin: false,
 	requiresPasswordReset: false,
 	createdAt: NOW,
@@ -31,7 +30,6 @@ describe("volunteer decider", () => {
 					data: {
 						id: "vol-1",
 						name: "Alice",
-						passwordHash: "hash-abc",
 						createdAt: NOW,
 					},
 				},
@@ -51,7 +49,6 @@ describe("volunteer decider", () => {
 						data: {
 							id: "vol-1",
 							name: "Alice",
-							passwordHash: "hash-abc",
 							createdAt: NOW,
 						},
 					},
@@ -68,7 +65,6 @@ describe("volunteer decider", () => {
 						data: {
 							id: "vol-1",
 							name: "Alice",
-							passwordHash: "hash-abc",
 							createdAt: NOW,
 						},
 					},
@@ -86,7 +82,6 @@ describe("volunteer decider", () => {
 					data: {
 						id: "vol-1",
 						name: "Alice Updated",
-						passwordHash: "hash-new",
 						updatedAt: LATER,
 					},
 				},
@@ -105,7 +100,6 @@ describe("volunteer decider", () => {
 						data: {
 							id: "vol-1",
 							name: "Alice",
-							passwordHash: "hash-abc",
 							updatedAt: LATER,
 						},
 					},
@@ -122,7 +116,6 @@ describe("volunteer decider", () => {
 						data: {
 							id: "vol-1",
 							name: "Alice",
-							passwordHash: "hash-abc",
 							updatedAt: LATER,
 						},
 					},
@@ -203,14 +196,13 @@ describe("volunteer decider", () => {
 			const events = decide(
 				{
 					type: "ChangePassword",
-					data: { id: "vol-1", passwordHash: "hash-new", changedAt: LATER },
+					data: { id: "vol-1", changedAt: LATER },
 				},
 				activeState,
 			);
 
 			expect(events).toHaveLength(1);
 			expect(events[0]?.type).toBe("PasswordChanged");
-			expect(events[0]?.data.passwordHash).toBe("hash-new");
 		});
 
 		it("throws on disabled state", () => {
@@ -218,7 +210,7 @@ describe("volunteer decider", () => {
 				decide(
 					{
 						type: "ChangePassword",
-						data: { id: "vol-1", passwordHash: "hash-new", changedAt: LATER },
+						data: { id: "vol-1", changedAt: LATER },
 					},
 					disabledState,
 				),
@@ -230,7 +222,7 @@ describe("volunteer decider", () => {
 				decide(
 					{
 						type: "ChangePassword",
-						data: { id: "vol-1", passwordHash: "hash-new", changedAt: LATER },
+						data: { id: "vol-1", changedAt: LATER },
 					},
 					initialState(),
 				),
@@ -245,7 +237,6 @@ describe("volunteer decider", () => {
 				data: {
 					id: "vol-1",
 					name: "Alice",
-					passwordHash: "hash-abc",
 					isAdmin: true,
 					requiresPasswordReset: true,
 					createdAt: NOW,
@@ -265,7 +256,6 @@ describe("volunteer decider", () => {
 				data: {
 					id: "vol-1",
 					name: "Alice",
-					passwordHash: "hash-abc",
 					createdAt: NOW,
 				},
 			});
@@ -301,12 +291,11 @@ describe("volunteer decider", () => {
 			};
 			const state = evolve(stateWithReset, {
 				type: "PasswordChanged",
-				data: { id: "vol-1", passwordHash: "hash-new", changedAt: LATER },
+				data: { id: "vol-1", changedAt: LATER },
 			});
 
 			if (state.status === "active" || state.status === "disabled") {
 				expect(state.requiresPasswordReset).toBe(false);
-				expect(state.passwordHash).toBe("hash-new");
 			}
 		});
 	});

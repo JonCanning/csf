@@ -1,6 +1,9 @@
 import type { SQLiteEventStore } from "@event-driven-io/emmett-sqlite";
 import { changePassword } from "../../domain/volunteer/commandHandlers.ts";
-import type { VolunteerRepository } from "../../domain/volunteer/repository.ts";
+import type {
+	VolunteerCredentialsStore,
+	VolunteerRepository,
+} from "../../domain/volunteer/repository.ts";
 import {
 	clearSessionCookie,
 	getSessionId,
@@ -73,6 +76,7 @@ export function handleChangePassword(
 	volunteerRepo: VolunteerRepository,
 	eventStore: SQLiteEventStore,
 	sessionStore: SessionStore,
+	credentialsStore: VolunteerCredentialsStore,
 ) {
 	return async (req: Request, volunteerId: string): Promise<Response> => {
 		const form = await req.formData();
@@ -103,7 +107,12 @@ export function handleChangePassword(
 		if (!valid) {
 			return changePasswordResponse("Current password is incorrect");
 		}
-		await changePassword(volunteerId, newPassword, eventStore);
+		await changePassword(
+			volunteerId,
+			newPassword,
+			eventStore,
+			credentialsStore,
+		);
 		const currentSessionId = getSessionId(req);
 		if (currentSessionId) {
 			await sessionStore.destroyAllExcept(volunteerId, currentSessionId);

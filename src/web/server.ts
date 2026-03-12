@@ -9,9 +9,10 @@ import { getSessionId } from "../infrastructure/auth/cookie.ts";
 import { SQLiteGrantRepository } from "../infrastructure/grant/sqliteGrantRepository.ts";
 import { DocumentStore } from "../infrastructure/projections/documents.ts";
 import {
-	startCleanupTimer,
 	type SessionStore,
+	startCleanupTimer,
 } from "../infrastructure/session/sqliteSessionStore.ts";
+import { SQLiteVolunteerCredentialsStore } from "../infrastructure/volunteer/sqliteVolunteerCredentialsStore.ts";
 import { changePasswordPage } from "./pages/changePassword.ts";
 import { dashboardPage } from "./pages/dashboard.ts";
 import { loginPage } from "./pages/login.ts";
@@ -105,6 +106,7 @@ export async function startServer(
 	}
 	const docStore = DocumentStore(pool);
 	await docStore.init();
+	const credentialsStore = await SQLiteVolunteerCredentialsStore(pool);
 	const appRepo = SQLiteApplicationRepository(pool);
 	const applyRoutes = createApplyRoutes(
 		eventStore,
@@ -119,7 +121,11 @@ export async function startServer(
 		volunteerRepo,
 		eventStore,
 	);
-	const volunteerRoutes = createVolunteerRoutes(volunteerRepo, eventStore);
+	const volunteerRoutes = createVolunteerRoutes(
+		volunteerRepo,
+		eventStore,
+		credentialsStore,
+	);
 	const applicationRoutes = createApplicationRoutes(
 		appRepo,
 		applicantRepo,
@@ -140,6 +146,7 @@ export async function startServer(
 		volunteerRepo,
 		eventStore,
 		sessionStore,
+		credentialsStore,
 	);
 
 	async function requireAuth(req: Request) {
@@ -329,7 +336,8 @@ export async function startServer(
 		async fetch(req) {
 			const url = new URL(req.url);
 			const volunteer = await requireAuth(req);
-			if (!volunteer) return withSecurityHeaders(Response.redirect("/login", 302));
+			if (!volunteer)
+				return withSecurityHeaders(Response.redirect("/login", 302));
 
 			if (url.pathname === "/volunteers" && req.method === "POST") {
 				if (!volunteer.isAdmin)

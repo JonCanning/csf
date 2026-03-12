@@ -22,13 +22,12 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 					const d = event.data;
 					await connection.command(
 						`INSERT INTO volunteers (id, name, phone, email, password_hash, is_admin, is_disabled, requires_password_reset, created_at, updated_at)
-						 VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+						 VALUES (?, ?, ?, ?, '', ?, 0, ?, ?, ?)`,
 						[
 							d.id,
 							d.name,
 							d.phone ?? null,
 							d.email ?? null,
-							d.passwordHash,
 							d.isAdmin ? 1 : 0,
 							d.requiresPasswordReset ? 1 : 0,
 							d.createdAt,
@@ -41,13 +40,12 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 					const d = event.data;
 					await connection.command(
 						`UPDATE volunteers SET
-							name = ?, phone = ?, email = ?, password_hash = ?, is_admin = COALESCE(?, is_admin), updated_at = ?
+							name = ?, phone = ?, email = ?, is_admin = COALESCE(?, is_admin), updated_at = ?
 						WHERE id = ?`,
 						[
 							d.name,
 							d.phone ?? null,
 							d.email ?? null,
-							d.passwordHash,
 							d.isAdmin != null ? (d.isAdmin ? 1 : 0) : null,
 							d.updatedAt,
 							d.id,
@@ -58,8 +56,8 @@ export const volunteerProjection = sqliteProjection<VolunteerEvent>({
 				case "PasswordChanged": {
 					const d = event.data;
 					await connection.command(
-						`UPDATE volunteers SET password_hash = ?, requires_password_reset = 0, updated_at = ? WHERE id = ?`,
-						[d.passwordHash, d.changedAt, d.id],
+						`UPDATE volunteers SET requires_password_reset = 0, updated_at = ? WHERE id = ?`,
+						[d.changedAt, d.id],
 					);
 					break;
 				}

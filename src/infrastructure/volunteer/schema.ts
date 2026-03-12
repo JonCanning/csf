@@ -1,3 +1,10 @@
+export const VOLUNTEER_CREDENTIALS_TABLE_DDL = `
+	CREATE TABLE IF NOT EXISTS volunteer_credentials (
+		volunteer_id TEXT PRIMARY KEY,
+		password_hash TEXT NOT NULL
+	)
+`;
+
 export const VOLUNTEERS_TABLE_DDL = `
 	CREATE TABLE IF NOT EXISTS volunteers (
 		id TEXT PRIMARY KEY,

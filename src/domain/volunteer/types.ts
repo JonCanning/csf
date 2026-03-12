@@ -37,7 +37,6 @@ export type CreateVolunteerCommand = Command<
 		name: string;
 		phone?: string;
 		email?: string;
-		passwordHash: string;
 		isAdmin?: boolean;
 		requiresPasswordReset?: boolean;
 		createdAt: string;
@@ -51,7 +50,6 @@ export type UpdateVolunteerCommand = Command<
 		name: string;
 		phone?: string;
 		email?: string;
-		passwordHash: string;
 		isAdmin?: boolean;
 		updatedAt: string;
 	}
@@ -77,7 +75,6 @@ export type ChangePasswordCommand = Command<
 	"ChangePassword",
 	{
 		id: string;
-		passwordHash: string;
 		changedAt: string;
 	}
 >;
@@ -98,7 +95,6 @@ export type VolunteerCreated = Event<
 		name: string;
 		phone?: string;
 		email?: string;
-		passwordHash: string;
 		isAdmin?: boolean;
 		requiresPasswordReset?: boolean;
 		createdAt: string;
@@ -112,7 +108,6 @@ export type VolunteerUpdated = Event<
 		name: string;
 		phone?: string;
 		email?: string;
-		passwordHash: string;
 		isAdmin?: boolean;
 		updatedAt: string;
 	}
@@ -138,7 +133,6 @@ export type PasswordChanged = Event<
 	"PasswordChanged",
 	{
 		id: string;
-		passwordHash: string;
 		changedAt: string;
 	}
 >;
@@ -162,7 +156,6 @@ export type VolunteerState =
 			name: string;
 			phone?: string;
 			email?: string;
-			passwordHash: string;
 			isAdmin: boolean;
 			requiresPasswordReset: boolean;
 			createdAt: string;

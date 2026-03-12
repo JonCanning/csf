@@ -8,10 +8,14 @@ import {
 	createVolunteer,
 	disableVolunteer,
 } from "../../src/domain/volunteer/commandHandlers.ts";
-import type { VolunteerRepository } from "../../src/domain/volunteer/repository.ts";
+import type {
+	VolunteerCredentialsStore,
+	VolunteerRepository,
+} from "../../src/domain/volunteer/repository.ts";
 import { createEventStore } from "../../src/infrastructure/eventStore.ts";
 import type { SessionStore } from "../../src/infrastructure/session/sqliteSessionStore.ts";
 import { SQLiteSessionStore } from "../../src/infrastructure/session/sqliteSessionStore.ts";
+import { SQLiteVolunteerCredentialsStore } from "../../src/infrastructure/volunteer/sqliteVolunteerCredentialsStore.ts";
 import { SQLiteVolunteerRepository } from "../../src/infrastructure/volunteer/sqliteVolunteerRepository.ts";
 import {
 	handleChangePassword,
@@ -24,6 +28,7 @@ describe("auth routes", () => {
 	let eventStore: SQLiteEventStore;
 	let sessionStore: SessionStore;
 	let volunteerRepo: VolunteerRepository;
+	let credentialsStore: VolunteerCredentialsStore;
 
 	beforeEach(async () => {
 		const es = createEventStore(":memory:");
@@ -31,11 +36,13 @@ describe("auth routes", () => {
 		eventStore = es.store;
 		sessionStore = await SQLiteSessionStore(pool);
 		volunteerRepo = await SQLiteVolunteerRepository(pool);
+		credentialsStore = await SQLiteVolunteerCredentialsStore(pool);
 		const { id } = await createVolunteer(
 			{ name: "Alice", password: "correct-password" },
 			eventStore,
+			credentialsStore,
 		);
-		await changePassword(id, "correct-password", eventStore);
+		await changePassword(id, "correct-password", eventStore, credentialsStore);
 	});
 
 	afterEach(async () => {
@@ -87,8 +94,9 @@ describe("auth routes", () => {
 			const { id } = await createVolunteer(
 				{ name: "Disabled", password: "pw123" },
 				eventStore,
+				credentialsStore,
 			);
-			await changePassword(id, "pw123", eventStore);
+			await changePassword(id, "pw123", eventStore, credentialsStore);
 			await disableVolunteer(id, eventStore);
 			const login = handleLogin(sessionStore, volunteerRepo);
 			const res = await login(loginRequest("Disabled", "pw123"));
@@ -99,7 +107,11 @@ describe("auth routes", () => {
 	});
 
 	test("redirects to /change-password when requiresPasswordReset is true", async () => {
-		await createVolunteer({ name: "NewVol", password: "temp-pw" }, eventStore);
+		await createVolunteer(
+			{ name: "NewVol", password: "temp-pw" },
+			eventStore,
+			credentialsStore,
+		);
 		const login = handleLogin(sessionStore, volunteerRepo);
 		const res = await login(loginRequest("NewVol", "temp-pw"));
 		expect(res.status).toBe(302);
@@ -111,8 +123,14 @@ describe("auth routes", () => {
 			const { id } = await createVolunteer(
 				{ name: "Bob", password: "old-pw" },
 				eventStore,
+				credentialsStore,
 			);
-			const handler = handleChangePassword(volunteerRepo, eventStore, sessionStore);
+			const handler = handleChangePassword(
+				volunteerRepo,
+				eventStore,
+				sessionStore,
+				credentialsStore,
+			);
 			const form = new URLSearchParams({
 				currentPassword: "old-pw",
 				newPassword: "new-password-123",
@@ -136,8 +154,14 @@ describe("auth routes", () => {
 			const { id } = await createVolunteer(
 				{ name: "Bob2", password: "old-pw" },
 				eventStore,
+				credentialsStore,
 			);
-			const handler = handleChangePassword(volunteerRepo, eventStore, sessionStore);
+			const handler = handleChangePassword(
+				volunteerRepo,
+				eventStore,
+				sessionStore,
+				credentialsStore,
+			);
 			const form = new URLSearchParams({
 				currentPassword: "wrong",
 				newPassword: "new-password-123",
@@ -160,8 +184,14 @@ describe("auth routes", () => {
 			const { id } = await createVolunteer(
 				{ name: "Bob3", password: "old-pw" },
 				eventStore,
+				credentialsStore,
 			);
-			const handler = handleChangePassword(volunteerRepo, eventStore, sessionStore);
+			const handler = handleChangePassword(
+				volunteerRepo,
+				eventStore,
+				sessionStore,
+				credentialsStore,
+			);
 			const form = new URLSearchParams({
 				currentPassword: "old-pw",
 				newPassword: "new-pw",

@@ -5,7 +5,10 @@ import {
 	enableVolunteer,
 	updateVolunteer,
 } from "../../domain/volunteer/commandHandlers.ts";
-import type { VolunteerRepository } from "../../domain/volunteer/repository.ts";
+import type {
+	VolunteerCredentialsStore,
+	VolunteerRepository,
+} from "../../domain/volunteer/repository.ts";
 import type {
 	Volunteer,
 	VolunteerEvent,
@@ -25,6 +28,7 @@ import {
 export function createVolunteerRoutes(
 	volunteerRepo: VolunteerRepository,
 	eventStore: SQLiteEventStore,
+	credentialsStore: VolunteerCredentialsStore,
 ) {
 	return {
 		async list(): Promise<Response> {
@@ -64,7 +68,7 @@ export function createVolunteerRoutes(
 					status: 400,
 				});
 			}
-			const { id } = await createVolunteer(data, eventStore);
+			const { id } = await createVolunteer(data, eventStore, credentialsStore);
 			const volunteers = await volunteerRepo.list();
 			const volunteer = await volunteerRepo.getById(id);
 			if (!volunteer) return new Response("Not found", { status: 404 });
@@ -87,7 +91,7 @@ export function createVolunteerRoutes(
 			if (!data) {
 				return new Response("Name is required", { status: 400 });
 			}
-			await updateVolunteer(id, data, eventStore);
+			await updateVolunteer(id, data, eventStore, credentialsStore);
 			const volunteer = await volunteerRepo.getById(id);
 			if (!volunteer) return new Response("Not found", { status: 404 });
 			const volunteers = await volunteerRepo.list();

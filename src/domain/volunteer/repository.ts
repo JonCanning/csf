@@ -7,3 +7,7 @@ export interface VolunteerRepository {
 	getAdmins(): Promise<Volunteer[]>;
 	verifyPassword(id: string, password: string): Promise<boolean>;
 }
+
+export interface VolunteerCredentialsStore {
+	setPassword(volunteerId: string, hash: string): Promise<void>;
+}

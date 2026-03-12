@@ -9,20 +9,26 @@ import {
 	enableVolunteer,
 	updateVolunteer,
 } from "../../src/domain/volunteer/commandHandlers.ts";
-import type { VolunteerRepository } from "../../src/domain/volunteer/repository.ts";
+import type {
+	VolunteerCredentialsStore,
+	VolunteerRepository,
+} from "../../src/domain/volunteer/repository.ts";
 import { createEventStore } from "../../src/infrastructure/eventStore.ts";
+import { SQLiteVolunteerCredentialsStore } from "../../src/infrastructure/volunteer/sqliteVolunteerCredentialsStore.ts";
 import { SQLiteVolunteerRepository } from "../../src/infrastructure/volunteer/sqliteVolunteerRepository.ts";
 
 describe("Volunteer (event-sourced)", () => {
 	let eventStore: SQLiteEventStore;
 	let pool: ReturnType<typeof SQLiteConnectionPool>;
 	let repo: VolunteerRepository;
+	let credentialsStore: VolunteerCredentialsStore;
 
 	beforeEach(async () => {
 		const es = createEventStore(":memory:");
 		eventStore = es.store;
 		pool = es.pool;
 		repo = await SQLiteVolunteerRepository(pool);
+		credentialsStore = await SQLiteVolunteerCredentialsStore(pool);
 	});
 
 	afterEach(async () => {
@@ -34,6 +40,7 @@ describe("Volunteer (event-sourced)", () => {
 			const { id } = await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
 
 			const found = await repo.getById(id);
@@ -54,6 +61,7 @@ describe("Volunteer (event-sourced)", () => {
 					password: "secret123",
 				},
 				eventStore,
+				credentialsStore,
 			);
 
 			const found = await repo.getById(id);
@@ -66,6 +74,7 @@ describe("Volunteer (event-sourced)", () => {
 			const { id } = await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
 
 			const found = await repo.getById(id);
@@ -81,6 +90,7 @@ describe("Volunteer (event-sourced)", () => {
 			await createVolunteer(
 				{ name: "Admin", password: "pw", isAdmin: true },
 				eventStore,
+				credentialsStore,
 			);
 			const vol = await repo.getByName("Admin");
 			expect(vol?.isAdmin).toBe(true);
@@ -88,7 +98,11 @@ describe("Volunteer (event-sourced)", () => {
 		});
 
 		test("defaults isAdmin to false", async () => {
-			await createVolunteer({ name: "Regular", password: "pw" }, eventStore);
+			await createVolunteer(
+				{ name: "Regular", password: "pw" },
+				eventStore,
+				credentialsStore,
+			);
 			const vol = await repo.getByName("Regular");
 			expect(vol?.isAdmin).toBe(false);
 		});
@@ -99,6 +113,7 @@ describe("Volunteer (event-sourced)", () => {
 			const { id } = await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
 			const found = await repo.getById(id);
 
@@ -117,8 +132,13 @@ describe("Volunteer (event-sourced)", () => {
 			await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
-			await createVolunteer({ name: "Bob", password: "secret456" }, eventStore);
+			await createVolunteer(
+				{ name: "Bob", password: "secret456" },
+				eventStore,
+				credentialsStore,
+			);
 			const all = await repo.list();
 
 			expect(all).toHaveLength(2);
@@ -135,8 +155,14 @@ describe("Volunteer (event-sourced)", () => {
 			const { id } = await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
-			await updateVolunteer(id, { name: "Alicia" }, eventStore);
+			await updateVolunteer(
+				id,
+				{ name: "Alicia" },
+				eventStore,
+				credentialsStore,
+			);
 
 			const found = await repo.getById(id);
 			expect(found!.name).toBe("Alicia");
@@ -146,8 +172,14 @@ describe("Volunteer (event-sourced)", () => {
 			const { id } = await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
-			await updateVolunteer(id, { password: "newsecret" }, eventStore);
+			await updateVolunteer(
+				id,
+				{ password: "newsecret" },
+				eventStore,
+				credentialsStore,
+			);
 
 			expect(await repo.verifyPassword(id, "newsecret")).toBe(true);
 			expect(await repo.verifyPassword(id, "secret123")).toBe(false);
@@ -162,8 +194,14 @@ describe("Volunteer (event-sourced)", () => {
 					password: "secret123",
 				},
 				eventStore,
+				credentialsStore,
 			);
-			await updateVolunteer(id, { name: "Alicia" }, eventStore);
+			await updateVolunteer(
+				id,
+				{ name: "Alicia" },
+				eventStore,
+				credentialsStore,
+			);
 
 			const found = await repo.getById(id);
 			expect(found!.phone).toBe("07700900001");
@@ -179,8 +217,14 @@ describe("Volunteer (event-sourced)", () => {
 					password: "secret123",
 				},
 				eventStore,
+				credentialsStore,
 			);
-			await updateVolunteer(id, { phone: null, email: null }, eventStore);
+			await updateVolunteer(
+				id,
+				{ phone: null, email: null },
+				eventStore,
+				credentialsStore,
+			);
 
 			const found = await repo.getById(id);
 			expect(found!.phone).toBeUndefined();
@@ -193,6 +237,7 @@ describe("Volunteer (event-sourced)", () => {
 			const { id } = await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
 			await disableVolunteer(id, eventStore);
 			const found = await repo.getById(id);
@@ -205,6 +250,7 @@ describe("Volunteer (event-sourced)", () => {
 			const { id } = await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
 			await disableVolunteer(id, eventStore);
 			await enableVolunteer(id, eventStore);
@@ -220,6 +266,7 @@ describe("Volunteer (event-sourced)", () => {
 			const { id } = await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
 
 			expect(await repo.verifyPassword(id, "secret123")).toBe(true);
@@ -229,6 +276,7 @@ describe("Volunteer (event-sourced)", () => {
 			const { id } = await createVolunteer(
 				{ name: "Alice", password: "secret123" },
 				eventStore,
+				credentialsStore,
 			);
 
 			expect(await repo.verifyPassword(id, "wrongpassword")).toBe(false);

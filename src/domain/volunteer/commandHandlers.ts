@@ -1,6 +1,7 @@
 import { CommandHandler, IllegalStateError } from "@event-driven-io/emmett";
 import type { SQLiteEventStore } from "@event-driven-io/emmett-sqlite";
 import { decide, evolve, initialState } from "./decider.ts";
+import type { VolunteerCredentialsStore } from "./repository.ts";
 import type {
 	CreateVolunteer,
 	UpdateVolunteer,
@@ -12,15 +13,14 @@ export async function changePassword(
 	id: string,
 	newPassword: string,
 	eventStore: SQLiteEventStore,
+	credentialsStore: VolunteerCredentialsStore,
 ): Promise<void> {
 	const passwordHash = await Bun.password.hash(newPassword);
 	const now = new Date().toISOString();
 	await handle(eventStore, streamId(id), (state) =>
-		decide(
-			{ type: "ChangePassword", data: { id, passwordHash, changedAt: now } },
-			state,
-		),
+		decide({ type: "ChangePassword", data: { id, changedAt: now } }, state),
 	);
+	await credentialsStore.setPassword(id, passwordHash);
 }
 
 const handle = CommandHandler<ReturnType<typeof initialState>, VolunteerEvent>({
@@ -35,6 +35,7 @@ function streamId(id: string): string {
 export async function createVolunteer(
 	data: CreateVolunteer & { requiresPasswordReset?: boolean },
 	eventStore: SQLiteEventStore,
+	credentialsStore: VolunteerCredentialsStore,
 ): Promise<{ id: string }> {
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
@@ -49,7 +50,6 @@ export async function createVolunteer(
 					name: data.name,
 					phone: data.phone,
 					email: data.email,
-					passwordHash,
 					isAdmin: data.isAdmin,
 					requiresPasswordReset: data.requiresPasswordReset ?? true,
 					createdAt: now,
@@ -58,6 +58,7 @@ export async function createVolunteer(
 			state,
 		),
 	);
+	await credentialsStore.setPassword(id, passwordHash);
 
 	return { id };
 }
@@ -66,11 +67,9 @@ export async function updateVolunteer(
 	id: string,
 	data: UpdateVolunteer,
 	eventStore: SQLiteEventStore,
+	credentialsStore: VolunteerCredentialsStore,
 ): Promise<void> {
 	const now = new Date().toISOString();
-	const passwordHash = data.password
-		? await Bun.password.hash(data.password)
-		: undefined;
 
 	await handle(eventStore, streamId(id), (state: VolunteerState) => {
 		if (state.status !== "active") {
@@ -79,18 +78,26 @@ export async function updateVolunteer(
 			);
 		}
 
-		const merged = {
-			id,
-			name: data.name ?? state.name,
-			phone: data.phone === null ? undefined : (data.phone ?? state.phone),
-			email: data.email === null ? undefined : (data.email ?? state.email),
-			passwordHash: passwordHash ?? state.passwordHash,
-			isAdmin: data.isAdmin ?? state.isAdmin,
-			updatedAt: now,
-		};
-
-		return decide({ type: "UpdateVolunteer", data: merged }, state);
+		return decide(
+			{
+				type: "UpdateVolunteer",
+				data: {
+					id,
+					name: data.name ?? state.name,
+					phone: data.phone === null ? undefined : (data.phone ?? state.phone),
+					email: data.email === null ? undefined : (data.email ?? state.email),
+					isAdmin: data.isAdmin ?? state.isAdmin,
+					updatedAt: now,
+				},
+			},
+			state,
+		);
 	});
+
+	if (data.password) {
+		const passwordHash = await Bun.password.hash(data.password);
+		await credentialsStore.setPassword(id, passwordHash);
+	}
 }
 
 export async function disableVolunteer(

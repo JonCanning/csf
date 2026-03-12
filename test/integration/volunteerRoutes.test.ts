@@ -25,10 +25,15 @@ describe("volunteer routes", () => {
 	beforeEach(async () => {
 		env = await createTestEnv();
 		volunteerRepo = await SQLiteVolunteerRepository(env.pool);
-		routes = createVolunteerRoutes(volunteerRepo, env.eventStore);
+		routes = createVolunteerRoutes(
+			volunteerRepo,
+			env.eventStore,
+			env.credentialsStore,
+		);
 		const result = await createVolunteer(
 			{ name: "Admin", password: "admin123", isAdmin: true },
 			env.eventStore,
+			env.credentialsStore,
 		);
 		adminId = result.id;
 	});
@@ -40,7 +45,11 @@ describe("volunteer routes", () => {
 	test("list returns empty state when no volunteers", async () => {
 		const freshEnv = await createTestEnv();
 		const freshRepo = await SQLiteVolunteerRepository(freshEnv.pool);
-		const freshRoutes = createVolunteerRoutes(freshRepo, freshEnv.eventStore);
+		const freshRoutes = createVolunteerRoutes(
+			freshRepo,
+			freshEnv.eventStore,
+			freshEnv.credentialsStore,
+		);
 		const res = await freshRoutes.list();
 		const html = await res.text();
 		expect(html).toContain("No volunteers yet");
