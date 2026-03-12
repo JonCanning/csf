@@ -11,6 +11,7 @@ export function loginPage(error?: string): string {
 		`
 	<div class="flex items-center justify-center min-h-screen p-4">
 		<div class="card bg-cream-50 p-10 w-full max-w-sm animate-fade-in">
+			<img src="/solidarity.png" alt="${escapeHtml(getFundName())} logo" class="w-16 h-16 mb-4 rounded-full object-cover">
 			<h1 class="font-heading font-bold text-2xl text-bark mb-1">${escapeHtml(getFundName())}</h1>
 			<p class="text-bark-muted text-sm mb-8">Volunteer Portal</p>
 
