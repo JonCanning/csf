@@ -1,11 +1,7 @@
 [tools]
 bun = "latest"
 
-[tasks.css]
-run = "bunx @tailwindcss/cli -i src/web/styles/app.css -o src/web/styles/dist/app.css --watch"
-description = "Watch and rebuild Tailwind CSS"
-
-[tasks."css:build"]
+[tasks."css"]
 run = "bunx @tailwindcss/cli -i src/web/styles/app.css -o src/web/styles/dist/app.css --minify"
 description = "Build Tailwind CSS (production)"
 

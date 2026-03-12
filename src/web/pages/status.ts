@@ -323,7 +323,7 @@ export function statusLookupPage(error?: string): string {
           id="ref"
           name="ref"
           required
-          placeholder="e.g. a1b2c3d4-…"
+          placeholder="e.g. 1234"
           class="input font-mono"
         />
       </div>
@@ -345,7 +345,7 @@ export function statusTimelinePage(
 		`<div class="w-full max-w-md">
   <div class="card p-8">
     <h1 class="font-heading text-2xl font-bold text-bark mb-1 text-center">Application Status</h1>
-    <p class="text-bark-muted font-body text-xs text-center mb-6">Ref: <span class="font-mono">${escapeHtml(app.id)}</span></p>
+    <p class="text-bark-muted font-body text-xs text-center mb-6">Ref: <span class="font-mono">${app.ref}</span></p>
     <div class="space-y-0">
       ${timeline}
     </div>
