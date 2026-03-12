@@ -1,4 +1,5 @@
 import {
+	assignVolunteer,
 	closeLotteryWindow,
 	expect,
 	openLotteryWindow,
@@ -64,7 +65,8 @@ test.describe("cash delivery happy path", () => {
 			{ timeout: 10000 },
 		);
 
-		// ── Step 5: Record cash payment ──────────────────────────
+		// ── Step 5: Assign volunteer, then record cash payment ───
+		await assignVolunteer(page);
 		await page.locator("input[data-bind-paymentamount]").fill("40");
 		await page.locator("button", { hasText: "Record Payment" }).click();
 		await expect(page.locator("#panel")).toContainText(

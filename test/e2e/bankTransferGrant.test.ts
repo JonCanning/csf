@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import {
+	assignVolunteer,
 	closeLotteryWindow,
 	expect,
 	openLotteryWindow,
@@ -8,7 +9,9 @@ import {
 	test,
 } from "./fixtures.ts";
 
-/** Set up a bank grant: apply with bank preference → draw → grant created */
+const FAKE_POA = Buffer.from("fake-png-data");
+
+/** Set up a bank grant: apply with bank details → draw → grant in awaiting_review */
 async function setupBankGrant(
 	page: Page,
 	login: (p: Page) => Promise<void>,
@@ -22,6 +25,9 @@ async function setupBankGrant(
 		name: applicantName,
 		phone,
 		paymentPreference: "bank",
+		sortCode: "12-34-56",
+		accountNumber: "12345678",
+		poa: FAKE_POA,
 	});
 	expect(url).toContain("status=accepted");
 
@@ -46,31 +52,8 @@ async function openGrantPanel(page: Page, applicantName: string) {
 	});
 }
 
-/** Submit bank details via the grant panel form */
-async function submitBankDetailsForm(
-	page: Page,
-	opts?: { sortCode?: string; accountNumber?: string },
-) {
-	await page
-		.locator('input[name="sortCode"]')
-		.fill(opts?.sortCode ?? "12-34-56");
-	await page
-		.locator('input[name="accountNumber"]')
-		.fill(opts?.accountNumber ?? "12345678");
-	// Create a small test file for POA upload
-	const poaInput = page.locator('input[name="poa"]');
-	await poaInput.setInputFiles({
-		name: "poa.png",
-		mimeType: "image/png",
-		buffer: Buffer.from("fake-png-data"),
-	});
-	await page.locator('button[type="submit"]', { hasText: "Submit" }).click();
-	// Form POST redirects back to /grants
-	await page.waitForURL("**/grants**", { timeout: 10000 });
-}
-
 test.describe("bank transfer grant payment path", () => {
-	test("full bank happy path: apply → bank details → approve POA → paid", async ({
+	test("full bank happy path: apply → awaiting review → approve POA → paid", async ({
 		serverInstance,
 		login,
 		page,
@@ -78,31 +61,24 @@ test.describe("bank transfer grant payment path", () => {
 		void serverInstance;
 		await setupBankGrant(page, login, "Bank Happy", "07700900100");
 
-		// ── Grant should be in "Awaiting Bank Details" state
+		// Grant should be in "Awaiting Review" with bank details and POA doc
 		await openGrantPanel(page, "Bank Happy");
-		await expect(page.locator("#panel")).toContainText(
-			"Awaiting Bank Details",
-			{ timeout: 10000 },
-		);
+		await expect(page.locator("#panel")).toContainText("Awaiting Review", {
+			timeout: 10000,
+		});
+		await expect(page.locator("#panel")).toContainText("12-34-56");
+		await expect(page.locator("#panel")).toContainText("12345678");
+		const docLink = page.locator('#panel a:has-text("View Document")');
+		await expect(docLink).toBeVisible({ timeout: 5000 });
 
-		// ── Submit bank details + POA
-		await submitBankDetailsForm(page);
-
-		// ── Panel should now show "Bank Details Submitted" with POA review
-		await openGrantPanel(page, "Bank Happy");
-		await expect(page.locator("#panel")).toContainText(
-			"Bank Details Submitted",
-			{ timeout: 10000 },
-		);
-		await expect(page.locator("#panel")).toContainText("View Document");
-
-		// ── Approve POA
+		// Assign volunteer, then approve POA
+		await assignVolunteer(page);
 		await page.locator("#panel button", { hasText: "Approve POA" }).click();
 		await expect(page.locator("#panel")).toContainText("Poa Approved", {
 			timeout: 10000,
 		});
 
-		// ── Record bank payment
+		// Record bank payment
 		await page.locator("input[data-bind-paymentamount]").fill("40");
 		await page.locator("button", { hasText: "Record Payment" }).click();
 		await expect(page.locator("#panel")).toContainText("Paid", {
@@ -111,7 +87,7 @@ test.describe("bank transfer grant payment path", () => {
 		await expect(page.locator("#panel")).toContainText("Bank Transfer");
 	});
 
-	test("POA rejection + resubmit → approved → paid", async ({
+	test("POA rejection → re-approve → paid", async ({
 		serverInstance,
 		login,
 		page,
@@ -119,37 +95,20 @@ test.describe("bank transfer grant payment path", () => {
 		void serverInstance;
 		await setupBankGrant(page, login, "POA Retry", "07700900101");
 
-		// Submit bank details first time
+		// Grant in awaiting_review — reject POA once
 		await openGrantPanel(page, "POA Retry");
-		await submitBankDetailsForm(page);
-
-		// Reject POA (attempt 1)
-		await openGrantPanel(page, "POA Retry");
-		await expect(page.locator("#panel")).toContainText(
-			"Bank Details Submitted",
-			{
-				timeout: 10000,
-			},
-		);
+		await expect(page.locator("#panel")).toContainText("Awaiting Review", {
+			timeout: 10000,
+		});
 		await page.locator("#panel button", { hasText: "Reject POA" }).click();
 
-		// Should go back to "Awaiting Bank Details"
-		await expect(page.locator("#panel")).toContainText(
-			"Awaiting Bank Details",
-			{ timeout: 10000 },
-		);
+		// Still in awaiting_review (attempt 1, no cash alternative yet)
+		await expect(page.locator("#panel")).toContainText("Awaiting Review", {
+			timeout: 10000,
+		});
 
-		// Resubmit bank details (attempt 2)
-		await submitBankDetailsForm(page);
-
-		// Approve POA this time
-		await openGrantPanel(page, "POA Retry");
-		await expect(page.locator("#panel")).toContainText(
-			"Bank Details Submitted",
-			{
-				timeout: 10000,
-			},
-		);
+		// Assign volunteer, then approve POA
+		await assignVolunteer(page);
 		await page.locator("#panel button", { hasText: "Approve POA" }).click();
 		await expect(page.locator("#panel")).toContainText("Poa Approved", {
 			timeout: 10000,
@@ -171,21 +130,18 @@ test.describe("bank transfer grant payment path", () => {
 		void serverInstance;
 		await setupBankGrant(page, login, "POA Triple", "07700900102");
 
-		// Submit + reject 3 times
+		await openGrantPanel(page, "POA Triple");
+
+		// Reject 3 times — 3rd triggers cash alternative
 		for (let attempt = 1; attempt <= 3; attempt++) {
-			await openGrantPanel(page, "POA Triple");
-			await submitBankDetailsForm(page);
-			await openGrantPanel(page, "POA Triple");
-			await expect(page.locator("#panel")).toContainText(
-				"Bank Details Submitted",
-				{ timeout: 10000 },
-			);
+			await expect(page.locator("#panel")).toContainText("Awaiting Review", {
+				timeout: 10000,
+			});
 			await page.locator("#panel button", { hasText: "Reject POA" }).click();
 
 			if (attempt < 3) {
-				// Should go back to awaiting bank details
 				await expect(page.locator("#panel")).toContainText(
-					"Awaiting Bank Details",
+					"Awaiting Review",
 					{ timeout: 10000 },
 				);
 			}
@@ -206,19 +162,17 @@ test.describe("bank transfer grant payment path", () => {
 		void serverInstance;
 		await setupBankGrant(page, login, "Cash Accept", "07700900103");
 
-		// 3x POA rejection to trigger cash alternative
+		await openGrantPanel(page, "Cash Accept");
+
+		// 3x rejection to trigger cash alternative
 		for (let attempt = 1; attempt <= 3; attempt++) {
-			await openGrantPanel(page, "Cash Accept");
-			await submitBankDetailsForm(page);
-			await openGrantPanel(page, "Cash Accept");
-			await expect(page.locator("#panel")).toContainText(
-				"Bank Details Submitted",
-				{ timeout: 10000 },
-			);
+			await expect(page.locator("#panel")).toContainText("Awaiting Review", {
+				timeout: 10000,
+			});
 			await page.locator("#panel button", { hasText: "Reject POA" }).click();
 			if (attempt < 3) {
 				await expect(page.locator("#panel")).toContainText(
-					"Awaiting Bank Details",
+					"Awaiting Review",
 					{ timeout: 10000 },
 				);
 			}
@@ -236,7 +190,8 @@ test.describe("bank transfer grant payment path", () => {
 			{ timeout: 10000 },
 		);
 
-		// Record cash payment
+		// Assign volunteer, then record cash payment
+		await assignVolunteer(page);
 		await page.locator("input[data-bind-paymentamount]").fill("40");
 		await page.locator("button", { hasText: "Record Payment" }).click();
 		await expect(page.locator("#panel")).toContainText(
@@ -261,19 +216,17 @@ test.describe("bank transfer grant payment path", () => {
 		void serverInstance;
 		await setupBankGrant(page, login, "Cash Decline", "07700900104");
 
-		// 3x POA rejection to trigger cash alternative
+		await openGrantPanel(page, "Cash Decline");
+
+		// 3x rejection to trigger cash alternative
 		for (let attempt = 1; attempt <= 3; attempt++) {
-			await openGrantPanel(page, "Cash Decline");
-			await submitBankDetailsForm(page);
-			await openGrantPanel(page, "Cash Decline");
-			await expect(page.locator("#panel")).toContainText(
-				"Bank Details Submitted",
-				{ timeout: 10000 },
-			);
+			await expect(page.locator("#panel")).toContainText("Awaiting Review", {
+				timeout: 10000,
+			});
 			await page.locator("#panel button", { hasText: "Reject POA" }).click();
 			if (attempt < 3) {
 				await expect(page.locator("#panel")).toContainText(
-					"Awaiting Bank Details",
+					"Awaiting Review",
 					{ timeout: 10000 },
 				);
 			}

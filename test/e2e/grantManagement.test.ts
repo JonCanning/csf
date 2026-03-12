@@ -93,43 +93,28 @@ test.describe("grant management operations", () => {
 		void serverInstance;
 		await login(page);
 
-		// Set up a bank grant
+		// Set up a bank grant — POA submitted at apply time
 		await openLotteryWindow(page);
 		const { url } = await submitApplication(page, {
 			name: "POA Doc Test",
 			phone: "07700900302",
 			paymentPreference: "bank",
+			sortCode: "12-34-56",
+			accountNumber: "12345678",
+			poa: Buffer.from("fake-png-data"),
 		});
 		expect(url).toContain("status=accepted");
 
 		await closeLotteryWindow(page);
 		await runLotteryDraw(page, { balance: 500 });
 
-		// Navigate to grant and submit bank details with POA file
+		// Grant panel should show awaiting_review with View Document link
 		await page.goto("/grants");
 		await page.locator("text=POA Doc Test").click();
-		await expect(page.locator("#panel")).toContainText(
-			"Awaiting Bank Details",
-			{ timeout: 10000 },
-		);
-
-		await page.locator('input[name="sortCode"]').fill("12-34-56");
-		await page.locator('input[name="accountNumber"]').fill("12345678");
-		const poaInput = page.locator('input[name="poa"]');
-		await poaInput.setInputFiles({
-			name: "proof.png",
-			mimeType: "image/png",
-			buffer: Buffer.from("fake-png-data"),
+		await expect(page.locator("#panel")).toContainText("Awaiting Review", {
+			timeout: 10000,
 		});
-		await page.locator('button[type="submit"]', { hasText: "Submit" }).click();
-		await page.waitForURL("**/grants**", { timeout: 10000 });
 
-		// Reopen grant panel — should show "View Document" link
-		await page.locator("text=POA Doc Test").click();
-		await expect(page.locator("#panel")).toContainText(
-			"Bank Details Submitted",
-			{ timeout: 10000 },
-		);
 		const docLink = page.locator('#panel a:has-text("View Document")');
 		await expect(docLink).toBeVisible({ timeout: 5000 });
 

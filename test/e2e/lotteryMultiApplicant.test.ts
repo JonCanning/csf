@@ -135,6 +135,8 @@ test.describe("lottery with multiple applicants", () => {
 			name: "Bank Mixed",
 			phone: "07700900221",
 			paymentPreference: "bank",
+			sortCode: "12-34-56",
+			accountNumber: "12345678",
 		});
 		expect(bankUrl).toContain("status=accepted");
 
@@ -165,11 +167,11 @@ test.describe("lottery with multiple applicants", () => {
 		);
 		await expect(page.locator("#panel")).toContainText("Cash");
 
-		// Close panel, click bank grant — should be awaiting bank details
+		// Close panel, click bank grant — should be awaiting review
 		await page.locator("#panel button", { hasText: "Close" }).click();
 		await page.locator("text=Bank Mixed").click();
 		await expect(page.locator("#panel")).toContainText(
-			"Awaiting Bank Details",
+			"Awaiting Review",
 			{ timeout: 10000 },
 		);
 		await expect(page.locator("#panel")).toContainText("Bank Transfer");

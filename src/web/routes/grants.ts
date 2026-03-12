@@ -39,8 +39,7 @@ export function createGrantRoutes(
 		const grant = await grantRepo.getById(grantId);
 		if (!grant) return null;
 		const volunteers = await volunteerRepo.list();
-		const docs = await docStore.getByEntityId(grantId);
-		const hasDocument = docs.some((d) => d.type === "proof_of_address");
+		const hasDocument = !!grant.proofOfAddressRef;
 		return grantPanel(grant, volunteers, hasDocument);
 	}
 

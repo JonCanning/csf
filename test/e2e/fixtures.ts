@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { test as base, type Page } from "@playwright/test";
+import { expect, test as base, type Page } from "@playwright/test";
 import { solveChallenge } from "altcha-lib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -70,7 +70,7 @@ export const test = base.extend<Fixtures>({
 	},
 });
 
-export { expect } from "@playwright/test";
+export { expect };
 
 /** Fetch challenge from test server, solve it, return base64 payload for the form */
 export async function solveAltcha(): Promise<string> {
@@ -102,19 +102,41 @@ export async function submitApplication(
 		phone: string;
 		paymentPreference?: "cash" | "bank";
 		meetingPlace?: string;
+		sortCode?: string;
+		accountNumber?: string;
+		poa?: Buffer;
 	},
 ): Promise<{ ok: boolean; url: string }> {
 	const altcha = await solveAltcha();
-	const res = await page.request.post("/apply", {
-		multipart: {
-			name: opts.name,
-			phone: opts.phone,
-			meetingPlace: opts.meetingPlace ?? "Town Hall",
-			paymentPreference: opts.paymentPreference ?? "cash",
-			altcha,
-		},
-	});
+	const multipart: Record<
+		string,
+		string | { name: string; mimeType: string; buffer: Buffer }
+	> = {
+		name: opts.name,
+		phone: opts.phone,
+		meetingPlace: opts.meetingPlace ?? "Town Hall",
+		paymentPreference: opts.paymentPreference ?? "cash",
+		altcha,
+	};
+	if (opts.sortCode) multipart.sortCode = opts.sortCode;
+	if (opts.accountNumber) multipart.accountNumber = opts.accountNumber;
+	if (opts.poa)
+		multipart.poa = {
+			name: "poa.png",
+			mimeType: "image/png",
+			buffer: opts.poa,
+		};
+	const res = await page.request.post("/apply", { multipart });
 	return { ok: res.ok(), url: res.url() };
+}
+
+/** Assign the "Test" volunteer to the currently open grant panel */
+export async function assignVolunteer(page: Page): Promise<void> {
+	const select = page.locator("select[data-bind-assignvolunteerid]");
+	await expect(select).toBeVisible({ timeout: 5000 });
+	await select.selectOption({ label: "Test" });
+	await page.locator("#panel button", { hasText: "Assign" }).click();
+	await expect(page.locator("#panel")).toContainText("Test", { timeout: 10000 });
 }
 
 /** Open lottery window, optionally close it, optionally run draw */

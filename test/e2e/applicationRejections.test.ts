@@ -221,6 +221,8 @@ test.describe("application rejections & edge cases", () => {
 			name: "Bank Tester",
 			phone: "07700900007",
 			paymentPreference: "bank",
+			sortCode: "12-34-56",
+			accountNumber: "12345678",
 		});
 		expect(ok).toBe(true);
 		expect(url).toContain("status=accepted");
