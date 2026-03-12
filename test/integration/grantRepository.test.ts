@@ -183,7 +183,7 @@ describe("SQLiteGrantRepository", () => {
 			await repo.updateNotes("g-notes-clear", "Initial note");
 			await repo.updateNotes("g-notes-clear", "");
 			const grant = await repo.getById("g-notes-clear");
-			expect(grant?.notes).toBeFalsy();
+			expect(grant?.notes).toBeNull();
 		});
 	});
 
