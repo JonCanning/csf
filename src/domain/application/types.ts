@@ -56,6 +56,7 @@ export type ReviewApplication = Command<
 		decision: "confirm" | "reject";
 		eligibility: EligibilityResult;
 		reviewedAt: string;
+		confirmedApplicantId?: string;
 	}
 >;
 

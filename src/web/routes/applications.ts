@@ -3,6 +3,7 @@ import type {
 	SQLiteEventStore,
 } from "@event-driven-io/emmett-sqlite";
 import type { ApplicantRepository } from "../../domain/applicant/repository.ts";
+import { toApplicantId } from "../../domain/application/applicantId.ts";
 import { checkEligibility } from "../../domain/application/checkEligibility.ts";
 import type {
 	ApplicationFilters,
@@ -67,11 +68,22 @@ export function createApplicationRoutes(
 			const app = await appRepo.getById(applicationId);
 			if (!app) return new Response("Not found", { status: 404 });
 
+			// When confirming, check eligibility against the submitted identity (phone+name),
+			// not the conflicting existing applicant. This allows confirmation even when the
+			// existing applicant already has an accepted application this month.
+			const confirmedApplicantId =
+				decision === "confirm" && app.phone && app.name
+					? toApplicantId(app.phone, app.name)
+					: undefined;
+
 			const eligibility =
 				decision === "confirm"
-					? await checkEligibility(app.applicantId, app.monthCycle, pool, {
-							skipWindowCheck: true,
-						})
+					? await checkEligibility(
+							confirmedApplicantId ?? app.applicantId,
+							app.monthCycle,
+							pool,
+							{ skipWindowCheck: true },
+						)
 					: ({ status: "eligible" } as const);
 
 			await reviewApplication(
@@ -80,6 +92,7 @@ export function createApplicationRoutes(
 				decision,
 				eligibility,
 				eventStore,
+				confirmedApplicantId,
 			);
 
 			const updated = await appRepo.getById(applicationId);

@@ -18,6 +18,7 @@ export async function reviewApplication(
 	decision: "confirm" | "reject",
 	eligibility: EligibilityResult,
 	eventStore: SQLiteEventStore,
+	confirmedApplicantId?: string,
 ): Promise<{ events: ApplicationEvent[] }> {
 	const command: ReviewApplication = {
 		type: "ReviewApplication",
@@ -27,6 +28,7 @@ export async function reviewApplication(
 			decision,
 			eligibility,
 			reviewedAt: new Date().toISOString(),
+			confirmedApplicantId,
 		},
 	};
 

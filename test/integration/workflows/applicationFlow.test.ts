@@ -238,12 +238,13 @@ describe("application workflow", () => {
 			});
 		});
 
-		test("volunteer confirms eligible → ApplicationConfirmed", async () => {
+		test("volunteer confirms eligible → ApplicationConfirmed with submitted applicant ID", async () => {
 			await submitFlagged();
 			await openWindow(env, "2026-06");
 
+			const submittedApplicantId = toApplicantId("07700900001", "Bob");
 			const eligibility = await checkEligibility(
-				toApplicantId("07700900001", "Alice"),
+				submittedApplicantId,
 				"2026-06",
 				env.pool,
 			);
@@ -254,15 +255,74 @@ describe("application workflow", () => {
 				"confirm",
 				eligibility,
 				env.eventStore,
+				submittedApplicantId,
 			);
 
 			expect(events[0]!.type).toBe("ApplicationConfirmed");
-			expect(events[0]!.data).toMatchObject({ volunteerId: "vol-1" });
+			expect(events[0]!.data).toMatchObject({
+				volunteerId: "vol-1",
+				applicantId: submittedApplicantId,
+			});
 
-			// Projection: accepted
+			// Projection: accepted with Bob's applicant ID
 			const apps = await queryApplications(env);
 			const flagged = apps.find((a) => a.id === "app-flagged");
 			expect(flagged!.status).toBe("accepted");
+			expect(flagged!.applicant_id).toBe(submittedApplicantId);
+		});
+
+		test("volunteer confirms when original applicant already applied same month → ApplicationConfirmed (not duplicate)", async () => {
+			// Alice applied in the SAME month as Bob's flagged application
+			await submitAcceptedApplication(env, {
+				applicationId: "app-alice-same-month",
+				phone: "07700900001",
+				name: "Alice",
+				monthCycle: "2026-06",
+			});
+
+			// Bob applies same phone, flagged (borrows Alice's applicant ID)
+			const { events: flaggedEvents } = await submitApplication(
+				{
+					applicationId: "app-flagged",
+					phone: "07700900001",
+					name: "Bob",
+					paymentPreference: "cash",
+					meetingPlace: "Station",
+					monthCycle: "2026-06",
+					eligibility: { status: "eligible" },
+				},
+				env.eventStore,
+				env.applicantRepo,
+			);
+			expect(flaggedEvents[1]!.type).toBe("ApplicationFlaggedForReview");
+
+			await openWindow(env, "2026-06");
+
+			// Eligibility check uses Bob's submitted identity — not Alice's
+			const submittedApplicantId = toApplicantId("07700900001", "Bob");
+			const eligibility = await checkEligibility(
+				submittedApplicantId,
+				"2026-06",
+				env.pool,
+			);
+			// Bob has no prior applications → eligible
+			expect(eligibility.status).toBe("eligible");
+
+			const { events } = await reviewApplication(
+				"app-flagged",
+				"vol-1",
+				"confirm",
+				eligibility,
+				env.eventStore,
+				submittedApplicantId,
+			);
+
+			expect(events[0]!.type).toBe("ApplicationConfirmed");
+
+			const apps = await queryApplications(env);
+			const confirmed = apps.find((a) => a.id === "app-flagged");
+			expect(confirmed!.status).toBe("accepted");
+			expect(confirmed!.applicant_id).toBe(submittedApplicantId);
 		});
 
 		test("volunteer confirms but cooldown → ApplicationRejected", async () => {

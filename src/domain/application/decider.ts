@@ -171,7 +171,7 @@ function decideReview(
 				type: "ApplicationConfirmed",
 				data: {
 					applicationId: state.applicationId,
-					applicantId: state.applicantId,
+					applicantId: data.confirmedApplicantId ?? state.applicantId,
 					volunteerId: data.volunteerId,
 					monthCycle: state.monthCycle,
 					confirmedAt: data.reviewedAt,
@@ -192,7 +192,7 @@ function decideReview(
 			type: "ApplicationRejected",
 			data: {
 				applicationId: state.applicationId,
-				applicantId: state.applicantId,
+				applicantId: data.confirmedApplicantId ?? state.applicantId,
 				reason: data.eligibility.status,
 				detail,
 				volunteerId: data.volunteerId,

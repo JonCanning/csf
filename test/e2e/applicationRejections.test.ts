@@ -157,11 +157,62 @@ test.describe("application rejections & edge cases", () => {
 		// Confirm the flagged application
 		await page.locator("#panel button", { hasText: "Confirm" }).click();
 
-		// After confirm, status changes to "Accepted" (projection maps confirmed → accepted)
-		// Verify the review buttons disappear (panel switches from reviewPanel to viewPanel)
+		// After confirm, review buttons disappear and status shows as Accepted
 		await expect(
 			page.locator("#panel button", { hasText: "Confirm" }),
 		).not.toBeVisible({ timeout: 10000 });
+		await expect(page.locator("#panel")).toContainText("Accepted", {
+			timeout: 5000,
+		});
+
+		// Table row should also reflect Accepted
+		const confirmedRow = page.locator("tr", { hasText: "Alias Person" });
+		await expect(confirmedRow).toContainText("Accepted", { timeout: 5000 });
+	});
+
+	test("volunteer confirms flagged application when original applicant already applied this month → confirmed", async ({
+		serverInstance,
+		login,
+		page,
+	}) => {
+		void serverInstance;
+		await login(page);
+
+		await openLotteryWindow(page);
+
+		// Original Name applies and is accepted
+		const original = await submitApplication(page, {
+			name: "Original Person",
+			phone: "07700900008",
+		});
+		expect(original.url).toContain("status=accepted");
+
+		// Same phone, different name → flagged
+		const flagged = await submitApplication(page, {
+			name: "Different Person",
+			phone: "07700900008",
+		});
+		expect(flagged.url).toContain("status=flagged");
+
+		// Navigate to flagged application
+		await page.goto("/applications");
+		const flaggedRow = page.locator("tr", { hasText: "Different Person" });
+		await expect(flaggedRow).toContainText("Flagged", { timeout: 5000 });
+		await flaggedRow.click();
+
+		await expect(
+			page.locator("#panel button", { hasText: "Confirm" }),
+		).toBeVisible({ timeout: 10000 });
+
+		// Confirming should succeed — the submitted identity has no prior applications
+		await page.locator("#panel button", { hasText: "Confirm" }).click();
+
+		await expect(
+			page.locator("#panel button", { hasText: "Confirm" }),
+		).not.toBeVisible({ timeout: 10000 });
+		await expect(page.locator("#panel")).toContainText("Accepted", {
+			timeout: 5000,
+		});
 	});
 
 	test("volunteer rejects flagged application → identity_mismatch", async ({
