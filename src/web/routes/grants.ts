@@ -15,7 +15,11 @@ import type { VolunteerRepository } from "../../domain/volunteer/repository.ts";
 import type { DocumentStore } from "../../infrastructure/projections/documents.ts";
 import { emptyPanel, grantPanel } from "../pages/grantPanel.ts";
 import { grantsBoard, grantsPage } from "../pages/grants.ts";
-import { patchElements, sseResponse } from "../sse.ts";
+import {
+	patchElements,
+	ServerSentEventGenerator,
+	sseResponse,
+} from "../sse.ts";
 
 function currentMonthCycle(): string {
 	const now = new Date();
@@ -156,6 +160,16 @@ export function createGrantRoutes(
 		): Promise<Response> {
 			await releaseSlot(grantId, reason, volunteerId, eventStore);
 			return refreshGrantResponse(grantId);
+		},
+
+		async handleUpdateNotes(id: string, req: Request): Promise<Response> {
+			const result = await ServerSentEventGenerator.readSignals(req);
+			if (!result.success) {
+				return new Response(result.error, { status: 400 });
+			}
+			const notes = String(result.signals.grantnotes ?? "");
+			await grantRepo.updateNotes(id, notes);
+			return sseResponse();
 		},
 
 		async serveDocument(docId: string): Promise<Response> {
