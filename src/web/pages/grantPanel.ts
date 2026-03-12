@@ -18,6 +18,10 @@ function formatDate(iso: string | null): string {
 	});
 }
 
+function escapeSignalValue(s: string): string {
+	return s.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n");
+}
+
 function formatStatus(status: string): string {
 	return status
 		.split("_")
@@ -42,7 +46,7 @@ function panelHeader(grant: GrantRow): string {
 	const name = escapeHtml(grant.applicantName ?? "Grant");
 	return `<div class="flex items-center justify-between mb-6">
 		<h2 class="font-heading font-bold text-xl text-bark">${name} <span class="text-bark-muted font-normal text-sm">#${grant.rank}</span></h2>
-		<button class="btn btn-secondary" data-on-click="@get('/grants/close')">Close</button>
+		<button class="btn btn-secondary" data-on:click="@get('/grants/close')">Close</button>
 	</div>`;
 }
 
@@ -91,12 +95,12 @@ function assignVolunteerForm(grant: GrantRow, volunteers: Volunteer[]): string {
 	return `<div class="mt-4 p-3 bg-cream-100 rounded-lg border border-cream-200">
 		<label class="label">Assign Volunteer</label>
 		<div class="flex gap-2" data-signals='${escapeHtml(JSON.stringify({ assignvolunteerid: grant.volunteerId ?? "" }))}'>
-			<select data-bind-assignvolunteerid class="input text-sm flex-1">
+			<select data-bind:assignvolunteerid class="input text-sm flex-1">
 				<option value="">Select volunteer...</option>
 				${options}
 			</select>
 			<button class="btn btn-primary text-sm"
-				data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/assign-volunteer?volunteerId=' + $assignvolunteerid)">
+				data-on:click="@post('/grants/${encodeURIComponent(grant.id)}/assign-volunteer?volunteerId=' + $assignvolunteerid)">
 				Assign
 			</button>
 		</div>
@@ -107,9 +111,9 @@ function releaseSlotForm(grant: GrantRow): string {
 	return `<div class="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
 		<label class="label">Release Slot</label>
 		<div data-signals='{"releasereason": ""}'>
-			<input type="text" data-bind-releasereason class="input text-sm mb-2" placeholder="Reason for release..." />
+			<input type="text" data-bind:releasereason class="input text-sm mb-2" placeholder="Reason for release..." />
 			<button class="btn btn-danger text-sm w-full"
-				data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/release?reason=' + $releasereason)">
+				data-on:click="@post('/grants/${encodeURIComponent(grant.id)}/release?reason=' + $releasereason)">
 				Release Slot
 			</button>
 		</div>
@@ -129,15 +133,15 @@ function editBankDetailsForm(grant: GrantRow): string {
 			<div class="space-y-2 mb-2">
 				<div>
 					<label class="label">Sort Code</label>
-					<input type="text" data-bind-editsortcode class="input text-sm" placeholder="12-34-56" />
+					<input type="text" data-bind:editsortcode class="input text-sm" placeholder="12-34-56" />
 				</div>
 				<div>
 					<label class="label">Account Number</label>
-					<input type="text" data-bind-editaccountnumber class="input text-sm" placeholder="12345678" />
+					<input type="text" data-bind:editaccountnumber class="input text-sm" placeholder="12345678" />
 				</div>
 			</div>
 			<button class="btn btn-primary text-sm w-full"
-				data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/update-bank-details?sortCode=' + $editsortcode + '&accountNumber=' + $editaccountnumber)">
+				data-on:click="@post('/grants/${encodeURIComponent(grant.id)}/update-bank-details?sortCode=' + $editsortcode + '&accountNumber=' + $editaccountnumber)">
 				Save
 			</button>
 		</div>
@@ -156,11 +160,11 @@ function poaReviewSection(grant: GrantRow, hasDocument: boolean): string {
 	return `${poaImage}
 	<div class="flex gap-2 mt-4">
 		<button class="btn btn-primary flex-1"
-			data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/approve-poa')">
+			data-on:click="@post('/grants/${encodeURIComponent(grant.id)}/approve-poa')">
 			Approve POA
 		</button>
 		<button class="btn btn-danger flex-1"
-			data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/reject-poa')">
+			data-on:click="@post('/grants/${encodeURIComponent(grant.id)}/reject-poa')">
 			Reject POA
 		</button>
 	</div>
@@ -173,10 +177,10 @@ function recordPaymentForm(grant: GrantRow, method: "bank" | "cash"): string {
 		<div data-signals='{"paymentamount": ""}'>
 			<div class="mb-2">
 				<label class="label">Amount (£)</label>
-				<input type="number" data-bind-paymentamount class="input text-sm" placeholder="0.00" step="0.01" />
+				<input type="number" data-bind:paymentamount class="input text-sm" placeholder="0.00" step="0.01" />
 			</div>
 			<button class="btn btn-primary text-sm w-full"
-				data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/record-payment?amount=' + $paymentamount + '&method=${method}')">
+				data-on:click="@post('/grants/${encodeURIComponent(grant.id)}/record-payment?amount=' + $paymentamount + '&method=${method}')">
 				Record Payment
 			</button>
 		</div>
@@ -186,11 +190,11 @@ function recordPaymentForm(grant: GrantRow, method: "bank" | "cash"): string {
 function cashAlternativeActions(grant: GrantRow): string {
 	return `<div class="flex gap-2 mt-4">
 		<button class="btn btn-primary flex-1"
-			data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/accept-cash')">
+			data-on:click="@post('/grants/${encodeURIComponent(grant.id)}/accept-cash')">
 			Accept Cash
 		</button>
 		<button class="btn btn-danger flex-1"
-			data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/decline-cash')">
+			data-on:click="@post('/grants/${encodeURIComponent(grant.id)}/decline-cash')">
 			Decline Cash
 		</button>
 	</div>`;
@@ -202,10 +206,10 @@ function reimbursementForm(grant: GrantRow): string {
 		<div data-signals='{"expenseref": ""}'>
 			<div class="mb-2">
 				<label class="label">Expense Reference</label>
-				<input type="text" data-bind-expenseref class="input text-sm" placeholder="OC-123" />
+				<input type="text" data-bind:expenseref class="input text-sm" placeholder="OC-123" />
 			</div>
 			<button class="btn btn-primary text-sm w-full"
-				data-on-click="@post('/grants/${encodeURIComponent(grant.id)}/record-reimbursement?expenseReference=' + $expenseref)">
+				data-on:click="@post('/grants/${encodeURIComponent(grant.id)}/record-reimbursement?expenseReference=' + $expenseref)">
 				Record Reimbursement
 			</button>
 		</div>
@@ -309,6 +313,11 @@ export function grantPanel(
 		${panelHeader(grant)}
 		<dl>${commonFields(grant)}</dl>
 		${actions}
+		<div class="mt-6 border-t border-cream-200 pt-4" data-signals="{grantnotes: '${escapeSignalValue(grant.notes ?? "")}'}">
+			<label class="label">Notes</label>
+			<textarea class="input" rows="3" data-bind-grantnotes
+				data-on-blur="@post('/grants/${encodeURIComponent(grant.id)}/notes')"></textarea>
+		</div>
 	`);
 }
 
