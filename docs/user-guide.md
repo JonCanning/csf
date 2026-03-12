@@ -87,6 +87,25 @@ At the start of each month's application period, a volunteer must open the appli
 
 > **What happens when the window opens:** The system begins accepting applications. Applications submitted before the window opens are automatically rejected with the reason _window closed_.
 
+### How Applicants Apply
+
+Once the window is open, applicants submit via the public form at `/apply`. The form collects:
+
+- **Name** (required)
+- **Phone number** (required — used for identity resolution and contacting winners)
+- **Email** (optional)
+- **Meeting place or address** (required — used to arrange cash handovers)
+- **Payment preference** — bank transfer or cash
+  - If bank: **sort code** (6 digits) and **account number** (8 digits) are required, and applicants can optionally upload a **proof of address** document at this stage to speed up verification later
+
+After submitting, applicants see a confirmation page with their application reference number and outcome (accepted, flagged for review, or rejected with reason).
+
+If the window is closed, the form displays a _window closed_ message and no application is submitted.
+
+### Checking Application Status
+
+Applicants can check their own progress at `/status` using the reference number shown on their confirmation page. The status page shows a timeline of their application, and if they were selected, the current state of their grant (e.g. awaiting POA review, payment pending). No login is required — the reference number is the only credential needed.
+
 ---
 
 ## 4. Reviewing Applications
