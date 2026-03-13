@@ -41,8 +41,8 @@ export function createLogsRoutes(pool: ReturnType<typeof SQLiteConnectionPool>) 
                FROM emt_messages
                WHERE message_kind = 'E'
                ORDER BY global_position DESC
-               LIMIT ${PAGE_SIZE} OFFSET ?`,
-              [offset],
+               LIMIT ? OFFSET ?`,
+              [PAGE_SIZE, offset],
             );
 
             return { rows, total, pages, page };
