@@ -90,6 +90,7 @@ export function evolve(
 				name: event.data.name,
 				phone: event.data.phone,
 				email: event.data.email,
+				passwordHash: event.data.passwordHash,
 				isAdmin: event.data.isAdmin ?? false,
 				requiresPasswordReset: event.data.requiresPasswordReset ?? false,
 				createdAt: event.data.createdAt,
@@ -102,6 +103,7 @@ export function evolve(
 				name: event.data.name,
 				phone: event.data.phone,
 				email: event.data.email,
+				passwordHash: event.data.passwordHash ?? state.passwordHash,
 				isAdmin: event.data.isAdmin ?? state.isAdmin,
 				updatedAt: event.data.updatedAt,
 			};
@@ -123,6 +125,7 @@ export function evolve(
 			if (state.status === "initial") return state;
 			return {
 				...state,
+				passwordHash: event.data.passwordHash,
 				requiresPasswordReset: false,
 				updatedAt: event.data.changedAt,
 			};

@@ -10,7 +10,7 @@ describe("cookie helpers", () => {
 		const cookie = setSessionCookie("abc-123");
 		expect(cookie).toContain("session=abc-123");
 		expect(cookie).toContain("HttpOnly");
-		expect(cookie).toContain("SameSite=Lax");
+		expect(cookie).toContain("SameSite=Strict");
 		expect(cookie).toContain("Path=/");
 		expect(cookie).toContain("Max-Age=86400");
 	});
