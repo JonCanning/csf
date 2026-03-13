@@ -22,7 +22,7 @@ export function logsPage(
       <h1 class="font-heading font-bold text-2xl">Event Log</h1>
       <p class="text-bark-muted text-sm mt-1">${totalCount} events · Page ${page} of ${totalPages}</p>
     </div>
-    <a href="/dashboard" class="btn btn-secondary text-sm">← Dashboard</a>
+    <a href="/" class="btn btn-secondary text-sm">← Dashboard</a>
   </div>
 
   ${paginationControls(page, totalPages)}
