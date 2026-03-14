@@ -157,17 +157,17 @@ test.describe("application rejections & edge cases", () => {
 		// Confirm the flagged application
 		await page.locator("#panel button", { hasText: "Confirm" }).click();
 
-		// After confirm, review buttons disappear and status shows as Accepted
+		// After confirm, review buttons disappear and status shows as Confirmed
 		await expect(
 			page.locator("#panel button", { hasText: "Confirm" }),
 		).not.toBeVisible({ timeout: 10000 });
-		await expect(page.locator("#panel")).toContainText("Accepted", {
+		await expect(page.locator("#panel")).toContainText("Confirmed", {
 			timeout: 5000,
 		});
 
-		// Table row should also reflect Accepted
+		// Table row should also reflect Confirmed
 		const confirmedRow = page.locator("tr", { hasText: "Alias Person" });
-		await expect(confirmedRow).toContainText("Accepted", { timeout: 5000 });
+		await expect(confirmedRow).toContainText("Confirmed", { timeout: 5000 });
 	});
 
 	test("volunteer confirms flagged application when original applicant already applied this month → confirmed", async ({
