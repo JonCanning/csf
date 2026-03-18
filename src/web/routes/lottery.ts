@@ -52,10 +52,9 @@ export function createLotteryRoutes(
 	eventStore: SQLiteEventStore,
 	pool: ReturnType<typeof SQLiteConnectionPool>,
 ) {
-	const monthCycle = currentMonthCycle();
-
 	return {
 		async show(): Promise<Response> {
+			const monthCycle = currentMonthCycle();
 			const status = await getWindowStatus(monthCycle, pool);
 			return new Response(lotteryPage(monthCycle, status), {
 				headers: { "Content-Type": "text/html" },
@@ -63,11 +62,13 @@ export function createLotteryRoutes(
 		},
 
 		async handleOpen(): Promise<Response> {
+			const monthCycle = currentMonthCycle();
 			await openApplicationWindow(monthCycle, eventStore);
 			return sseResponse(patchElements(lotteryContent(monthCycle, "open")));
 		},
 
 		async handleClose(): Promise<Response> {
+			const monthCycle = currentMonthCycle();
 			await closeApplicationWindow(monthCycle, eventStore);
 			return sseResponse(
 				patchElements(lotteryContent(monthCycle, "windowClosed")),
@@ -80,9 +81,10 @@ export function createLotteryRoutes(
 			reserve: number,
 			grantAmount: number,
 		): Promise<Response> {
+			const monthCycle = currentMonthCycle();
 			const applications = await appRepo.listByMonth(monthCycle);
 			const applicantPool = applications
-				.filter((a) => a.status === "accepted")
+				.filter((a) => a.status === "accepted" || a.status === "confirmed")
 				.map((a) => ({
 					applicationId: a.id,
 					applicantId: a.applicantId,

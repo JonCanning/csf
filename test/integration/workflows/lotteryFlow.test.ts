@@ -100,6 +100,82 @@ describe("lottery workflow", () => {
 		}
 	});
 
+	test("confirmed applications are included in lottery pool", async () => {
+		// Submit one accepted app normally
+		await submitAcceptedApplication(env, {
+			applicationId: "app-accepted",
+			phone: "07700900001",
+			name: "Alice",
+			monthCycle: "2026-03",
+		});
+
+		// Create a confirmed app by emitting events directly (flagged → confirmed)
+		const confirmedApplicantId = toApplicantId("07700900099", "Zara");
+		await env.eventStore.appendToStream("application-app-confirmed", [
+			{
+				type: "ApplicationSubmitted",
+				data: {
+					applicationId: "app-confirmed",
+					applicantId: confirmedApplicantId,
+					identity: { phone: "07700900099", name: "Zara" },
+					paymentPreference: "bank",
+					meetingDetails: { place: "Mill Road" },
+					monthCycle: "2026-03",
+					submittedAt: "2026-03-01T00:00:00Z",
+				},
+			},
+			{
+				type: "ApplicationFlaggedForReview",
+				data: {
+					applicationId: "app-confirmed",
+					applicantId: confirmedApplicantId,
+					reason: "multiple-matches",
+					monthCycle: "2026-03",
+					flaggedAt: "2026-03-01T00:00:01Z",
+				},
+			},
+			{
+				type: "ApplicationConfirmed",
+				data: {
+					applicationId: "app-confirmed",
+					applicantId: confirmedApplicantId,
+					volunteerId: "vol-1",
+					monthCycle: "2026-03",
+					confirmedAt: "2026-03-02T00:00:00Z",
+				},
+			},
+		]);
+
+		await openWindow(env, "2026-03");
+		await closeWindow(env, "2026-03");
+
+		// Query both accepted and confirmed apps
+		const apps = await queryApplications(env);
+		const accepted = apps.filter((a) => a.status === "accepted");
+		const confirmed = apps.filter((a) => a.status === "confirmed");
+		expect(accepted).toHaveLength(1);
+		expect(confirmed).toHaveLength(1);
+
+		// Draw with both in the pool (mimicking the fixed filter logic)
+		const pool = apps
+			.filter((a) => a.status === "accepted" || a.status === "confirmed")
+			.map((a) => ({
+				applicationId: a.id,
+				applicantId: a.applicant_id,
+			}));
+		expect(pool).toHaveLength(2);
+
+		const drawn = await drawLottery(env, {
+			monthCycle: "2026-03",
+			applicantPool: pool,
+			availableBalance: 80,
+			grantAmount: 40,
+		});
+
+		expect(drawn.data.selected).toHaveLength(2);
+		expect(drawn.data.notSelected).toHaveLength(0);
+	});
+
 	test("process manager is idempotent", async () => {
 		await submitAcceptedApplication(env, {
 			applicationId: "app-1",
